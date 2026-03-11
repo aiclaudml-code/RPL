@@ -14,7 +14,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from utils.helpers import safe_request, cache_data, load_cache, get_random_headers
-from config.settings import CACHE_DIR, PROCESSED_DIR, SEASONS
+from config.settings import CACHE_DIR, PROCESSED_DIR, SEASONS, REFEREES_2025_26
 
 logger = logging.getLogger(__name__)
 
@@ -163,11 +163,15 @@ class RPLStatisticsCollector:
             "Химки", "Ахмат", "Сочи", "Пари НН", "Урал", "Крылья Советов",
         ]
 
-        referees = [
+        # Все судьи для исторических сезонов (2023-24, 2024-25)
+        referees_historical = [
             "Казарцев С.", "Вилков В.", "Матюнин А.", "Левников С.",
             "Безбородов А.", "Панин А.", "Карасев С.", "Иванов И.",
             "Москалев А.", "Чистяков Е.", "Еськов А.", "Лапочкин С.",
         ]
+
+        # Судьи сезона 2025/2026 (только активные в этом сезоне)
+        referees_2025_26 = REFEREES_2025_26
 
         # Статистика судей (строгость)
         referee_strictness = {
@@ -192,7 +196,7 @@ class RPLStatisticsCollector:
         # Выход медбригады: ~1.8 раза за матч
 
         np.random.seed(42)
-        n_matches = 240  # примерно 2 сезона
+        n_matches = 240  # примерно 2 исторических сезона
 
         data = []
         match_id = 1
@@ -200,7 +204,7 @@ class RPLStatisticsCollector:
         for i in range(n_matches):
             home = np.random.choice(teams)
             away = np.random.choice([t for t in teams if t != home])
-            referee = np.random.choice(referees)
+            referee = np.random.choice(referees_historical)
             strictness = referee_strictness.get(referee, 1.0)
 
             # Желтые карточки (Пуассон, среднее 3.4, модифицированное строгостью)
@@ -258,6 +262,67 @@ class RPLStatisticsCollector:
             })
             match_id += 1
 
+        # Добавить матчи сезона 2025/2026 (только активные судьи этого сезона)
+        np.random.seed(2025)
+        # РПЛ 2025/2026: 16 команд, 30 туров = 240 матчей в полном сезоне.
+        # Генерируем ~120 матчей (первая половина сезона, по состоянию на март 2026)
+        n_matches_2526 = 120
+        for i in range(n_matches_2526):
+            home = np.random.choice(teams)
+            away = np.random.choice([t for t in teams if t != home])
+            referee = np.random.choice(referees_2025_26)
+            strictness = referee_strictness.get(referee, 1.0)
+
+            base_yellow = 3.4 * strictness
+            home_yellow = np.random.poisson(base_yellow * 0.48)
+            away_yellow = np.random.poisson(base_yellow * 0.52)
+
+            home_attack = np.random.uniform(0.8, 1.2)
+            away_attack = np.random.uniform(0.8, 1.2)
+            home_corners = np.random.poisson(5.0 * home_attack)
+            away_corners = np.random.poisson(4.8 * away_attack)
+
+            has_penalty = int(np.random.random() < 0.28)
+            penalty_count = np.random.poisson(0.35) if has_penalty else 0
+            medical_exits = np.random.poisson(1.8)
+            home_goals = np.random.poisson(1.5)
+            away_goals = np.random.poisson(1.1)
+            home_fouls = np.random.poisson(12.5)
+            away_fouls = np.random.poisson(13.2)
+
+            # Даты: июль 2025 — март 2026
+            month = 7 + (i * 8 // n_matches_2526)
+            year = 2025 if month <= 12 else 2026
+            month = month if month <= 12 else month - 12
+            day = (i % 28) + 1
+
+            data.append({
+                "match_id": match_id,
+                "date": f"{year}-{month:02d}-{day:02d}",
+                "season": "2025-26",
+                "home_team": home,
+                "away_team": away,
+                "referee": referee,
+                "home_goals": home_goals,
+                "away_goals": away_goals,
+                "home_yellow_cards": home_yellow,
+                "away_yellow_cards": away_yellow,
+                "total_yellow_cards": home_yellow + away_yellow,
+                "home_red_cards": int(np.random.random() < 0.05),
+                "away_red_cards": int(np.random.random() < 0.05),
+                "home_corners": home_corners,
+                "away_corners": away_corners,
+                "total_corners": home_corners + away_corners,
+                "home_fouls": home_fouls,
+                "away_fouls": away_fouls,
+                "total_fouls": home_fouls + away_fouls,
+                "has_penalty": has_penalty,
+                "penalty_count": penalty_count,
+                "medical_exits": medical_exits,
+                "referee_strictness": strictness,
+            })
+            match_id += 1
+
         df = pd.DataFrame(data)
 
         output_path = PROCESSED_DIR / "rpl_synthetic.csv"
@@ -269,12 +334,31 @@ class RPLStatisticsCollector:
 class RefereeStatsCollector:
     """Сборщик статистики судей"""
 
-    def get_referee_stats(self, matches_df: pd.DataFrame) -> pd.DataFrame:
+    def get_referee_stats(
+        self, matches_df: pd.DataFrame, season: str = None
+    ) -> pd.DataFrame:
         """
-        Вычислить статистику каждого судьи
+        Вычислить статистику каждого судьи.
+        Если season задан — берём только судей, судивших матчи в этом сезоне.
+        По умолчанию используется текущий сезон (SEASONS["current"]).
         """
         if matches_df.empty or "referee" not in matches_df.columns:
             return pd.DataFrame()
+
+        if season is None:
+            season = SEASONS["current"]
+
+        # Определяем судей, работавших в указанном сезоне
+        if season and "season" in matches_df.columns:
+            season_referees = set(
+                matches_df[matches_df["season"] == season]["referee"].unique()
+            )
+            if season_referees:
+                matches_df = matches_df[matches_df["referee"].isin(season_referees)]
+            logger.info(
+                f"Статистика судей: фильтр по сезону {season} "
+                f"({len(season_referees)} судей)"
+            )
 
         referee_stats = (
             matches_df.groupby("referee")
