@@ -9,6 +9,7 @@ import json
 import logging
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import streamlit as st
@@ -18,7 +19,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 
-from config.settings import RPL_TEAMS, MODEL_PARAMS, BOOKMAKERS
+from config.settings import RPL_TEAMS, MODEL_PARAMS, BOOKMAKERS, SEASONS
 from models.prediction_engine import PredictionEngine, PoissonModel
 from analysis.value_finder import ValueBetFinder, BetRecommendation
 from analysis.bet_calculator import BetCalculator
@@ -99,6 +100,16 @@ st.markdown(
 
 
 # ==================== КЕШИРОВАНИЕ ДАННЫХ ====================
+@st.cache_data(ttl=300)  # кеш 5 минут
+def load_schedule() -> dict:
+    """Загрузить расписание туров РПЛ"""
+    schedule_path = Path(__file__).parent.parent / "data" / "schedule.json"
+    if schedule_path.exists():
+        with open(schedule_path, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
 @st.cache_data(ttl=3600)  # кеш на 1 час
 def load_historical_data():
     """Загрузить исторические данные"""
@@ -177,10 +188,11 @@ def main():
     with st.spinner("Загрузка данных..."):
         matches_df = load_historical_data()
         referee_stats_df, team_stats_df = load_stats(matches_df)
+        schedule = load_schedule()
 
     # Маршрутизация
     if page == "Анализ матчей":
-        show_match_analysis(matches_df, referee_stats_df, team_stats_df)
+        show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule)
     elif page == "Ценные ставки":
         show_value_bets(matches_df, referee_stats_df, team_stats_df)
     elif page == "Калькулятор ставок":
@@ -194,28 +206,102 @@ def main():
 
 
 # ==================== АНАЛИЗ МАТЧЕЙ ====================
-def show_match_analysis(matches_df, referee_stats_df, team_stats_df):
+def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: dict = None):
     st.header("Анализ матчей")
+
+    # ---------- БЛИЖАЙШИЙ ТУР РПЛ ----------
+    if schedule and schedule.get("rounds"):
+        current_round_num = schedule.get("current_round", 1)
+        season = schedule.get("season", SEASONS["current"])
+
+        # Найти ближайший тур
+        nearest = next(
+            (r for r in schedule["rounds"] if r["round"] == current_round_num),
+            schedule["rounds"][0],
+        )
+
+        with st.container(border=True):
+            st.markdown(
+                f"### 📅 Тур {nearest['round']} · {nearest['dates']} · РПЛ {season}"
+            )
+
+            # Инициализировать session state
+            if "selected_home" not in st.session_state:
+                st.session_state.selected_home = None
+            if "selected_away" not in st.session_state:
+                st.session_state.selected_away = None
+            if "selected_referee" not in st.session_state:
+                st.session_state.selected_referee = ""
+
+            # Группировать матчи по дате
+            matches_by_date: Dict[str, list] = {}
+            for m in nearest["matches"]:
+                matches_by_date.setdefault(m["date"], []).append(m)
+
+            for date_str, day_matches in matches_by_date.items():
+                st.caption(f"**{date_str}**")
+                cols = st.columns(len(day_matches))
+                for col, m in zip(cols, day_matches):
+                    with col:
+                        is_selected = (
+                            st.session_state.selected_home == m["home"]
+                            and st.session_state.selected_away == m["away"]
+                        )
+                        btn_label = (
+                            f"{'✅ ' if is_selected else ''}"
+                            f"{m['home']} — {m['away']}\n"
+                            f"🕐 {m['time']}  👤 {m['referee']}"
+                        )
+                        if st.button(
+                            btn_label,
+                            key=f"sched_{m['home']}_{m['away']}",
+                            use_container_width=True,
+                            type="primary" if is_selected else "secondary",
+                        ):
+                            st.session_state.selected_home = m["home"]
+                            st.session_state.selected_away = m["away"]
+                            st.session_state.selected_referee = m.get("referee", "")
+                            st.rerun()
+
+    st.divider()
+
+    # ---------- ФОРМА ВЫБОРА МАТЧА ----------
+    teams_list = list(RPL_TEAMS.keys())
+
+    # Применить выбор из расписания
+    default_home_idx = (
+        teams_list.index(st.session_state.selected_home)
+        if st.session_state.get("selected_home") in teams_list
+        else 0
+    )
 
     col1, col2, col3 = st.columns(3)
 
-    teams_list = list(RPL_TEAMS.keys())
-
     with col1:
-        home_team = st.selectbox("Команда хозяев", teams_list, index=0)
+        home_team = st.selectbox("Команда хозяев", teams_list, index=default_home_idx)
+
+    away_options = [t for t in teams_list if t != home_team]
+    default_away_idx = (
+        away_options.index(st.session_state.selected_away)
+        if st.session_state.get("selected_away") in away_options
+        else 0
+    )
+
     with col2:
-        away_team = st.selectbox(
-            "Команда гостей",
-            [t for t in teams_list if t != home_team],
-            index=1,
-        )
+        away_team = st.selectbox("Команда гостей", away_options, index=default_away_idx)
+
     with col3:
         referees_list = [""] + (
             list(referee_stats_df["referee"].unique())
             if not referee_stats_df.empty
             else []
         )
-        referee = st.selectbox("Судья (необязательно)", referees_list)
+        default_ref_idx = (
+            referees_list.index(st.session_state.selected_referee)
+            if st.session_state.get("selected_referee") in referees_list
+            else 0
+        )
+        referee = st.selectbox("Судья (необязательно)", referees_list, index=default_ref_idx)
 
     if st.button("Анализировать матч", type="primary", use_container_width=True):
         with st.spinner(f"Анализ: {home_team} vs {away_team}..."):
