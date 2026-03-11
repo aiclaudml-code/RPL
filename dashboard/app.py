@@ -952,10 +952,24 @@ def show_referee_stats(referee_stats_df):
         st.warning("Данные о судьях недоступны")
         return
 
-    st.info(
-        "Строгость судьи влияет на количество желтых карточек и пенальти. "
-        "Индекс > 1.0 = судья строже среднего, < 1.0 = мягче среднего."
-    )
+    # Источник данных
+    source = "synthetic"
+    if "source" in referee_stats_df.columns:
+        sources = referee_stats_df["source"].dropna().unique()
+        if "smart-tables.ru" in sources:
+            source = "smart-tables.ru"
+
+    if source == "smart-tables.ru":
+        st.success(
+            "Данные: **[smart-tables.ru](https://smart-tables.ru/referee)** "
+            "(сезон 2025/2026) | "
+            "Строгость > 1.0 = судья строже среднего, < 1.0 = мягче среднего."
+        )
+    else:
+        st.info(
+            "Данные: синтетические (smart-tables.ru недоступен) | "
+            "Строгость > 1.0 = судья строже среднего, < 1.0 = мягче среднего."
+        )
 
     # Таблица судей
     col1, col2 = st.columns([2, 1])

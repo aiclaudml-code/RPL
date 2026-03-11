@@ -121,6 +121,17 @@ STATS_SOURCES = {
         "base_url": "https://int.soccerway.com",
         "enabled": True,
     },
+    "smart_tables": {
+        "name": "Smart Tables",
+        "base_url": "https://smart-tables.ru",
+        "rpl_url": "https://smart-tables.ru/league/russia/premier_league",
+        "referee_url": "https://smart-tables.ru/referee",
+        "enabled": True,
+        "description": (
+            "Статистика команд и судей РПЛ: ЖК, угловые, фолы, пенальти. "
+            "Используется для обогащения данных текущего сезона."
+        ),
+    },
 }
 
 # ==================== ПАРАМЕТРЫ МОДЕЛИ ====================

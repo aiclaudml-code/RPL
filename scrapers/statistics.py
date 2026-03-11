@@ -1,6 +1,6 @@
 """
 Сборщик статистических данных для РПЛ
-Источники: FBref, Understat, Football-Data.co.uk, Transfermarkt
+Источники: FBref, Understat, Football-Data.co.uk, Transfermarkt, Smart Tables
 """
 import json
 import logging
@@ -38,6 +38,7 @@ class RPLStatisticsCollector:
         """
         Собрать исторические данные матчей РПЛ
         Включает: желтые карточки, угловые, пенальти, судьи
+        Источники: Football-Data.co.uk, Smart Tables (smart-tables.ru)
         """
         if seasons is None:
             seasons = SEASONS["available"]
@@ -341,6 +342,7 @@ class RefereeStatsCollector:
         Вычислить статистику каждого судьи.
         Если season задан — берём только судей, судивших матчи в этом сезоне.
         По умолчанию используется текущий сезон (SEASONS["current"]).
+        Дополнительно обогащает данные из Smart Tables (smart-tables.ru).
         """
         if matches_df.empty or "referee" not in matches_df.columns:
             return pd.DataFrame()
@@ -385,11 +387,67 @@ class RefereeStatsCollector:
             referee_stats["avg_penalties"] / avg_penalty
         )
 
+        # Обогащение данными из Smart Tables
+        referee_stats = self._enrich_from_smart_tables(referee_stats)
+
         output_path = PROCESSED_DIR / "referee_stats.csv"
         referee_stats.to_csv(output_path, index=False, encoding="utf-8")
         logger.info(f"Статистика судей: {len(referee_stats)} судей")
 
         return referee_stats
+
+    def _enrich_from_smart_tables(self, base_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Обогатить базовую статистику данными из Smart Tables.
+        Если Smart Tables возвращает данные — перезаписываем avg_yellow_cards,
+        avg_fouls, avg_penalties и пересчитываем индексы.
+        """
+        try:
+            scraper = SmartTablesScraper()
+            st_df = scraper.get_rpl_referee_stats()
+
+            if st_df.empty:
+                logger.info("Smart Tables: данные судей недоступны, используем базовые")
+                base_df["source"] = "synthetic"
+                return base_df
+
+            logger.info(
+                f"Smart Tables: получена статистика по {len(st_df)} судьям — "
+                "обогащаем базовые данные"
+            )
+
+            # Объединяем по имени судьи
+            merged = base_df.merge(
+                st_df[["referee", "avg_yellow_cards", "avg_fouls", "avg_penalties"]],
+                on="referee",
+                how="left",
+                suffixes=("_base", "_st"),
+            )
+
+            # Предпочитаем Smart Tables там, где данные есть
+            for col in ["avg_yellow_cards", "avg_fouls", "avg_penalties"]:
+                st_col = f"{col}_st"
+                base_col = f"{col}_base"
+                if st_col in merged.columns:
+                    merged[col] = merged[st_col].combine_first(merged[base_col])
+                    merged.drop(columns=[st_col, base_col], errors="ignore", inplace=True)
+
+            # Пересчитать индексы
+            avg_y = merged["avg_yellow_cards"].mean()
+            if avg_y and avg_y > 0:
+                merged["strictness_index"] = merged["avg_yellow_cards"] / avg_y
+
+            avg_p = merged["avg_penalties"].mean()
+            if avg_p and avg_p > 0:
+                merged["penalty_index"] = merged["avg_penalties"] / avg_p
+
+            merged["source"] = "smart-tables.ru"
+            return merged
+
+        except Exception as e:
+            logger.warning(f"Smart Tables: ошибка обогащения данных судей: {e}")
+            base_df["source"] = "synthetic"
+            return base_df
 
 
 class TeamStatsCollector:
@@ -489,11 +547,62 @@ class TeamStatsCollector:
             }
 
         stats_df = pd.DataFrame(list(team_stats.values()))
+
+        # Обогащение данными из Smart Tables
+        stats_df = self._enrich_from_smart_tables(stats_df)
+
         output_path = PROCESSED_DIR / "team_stats.csv"
         stats_df.to_csv(output_path, index=False, encoding="utf-8")
         logger.info(f"Статистика команд: {len(stats_df)} команд")
 
         return stats_df
+
+    def _enrich_from_smart_tables(self, base_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Обогатить базовую статистику команд данными из Smart Tables.
+        Smart Tables даёт актуальные данные текущего сезона РПЛ 2025/2026.
+        """
+        try:
+            scraper = SmartTablesScraper()
+            st_df = scraper.get_rpl_team_stats()
+
+            if st_df.empty:
+                logger.info("Smart Tables: данные команд недоступны, используем базовые")
+                base_df["source"] = "synthetic"
+                return base_df
+
+            logger.info(
+                f"Smart Tables: получена статистика по {len(st_df)} командам — "
+                "обогащаем базовые данные"
+            )
+
+            # Объединяем по названию команды
+            enrich_cols = [
+                c for c in ["avg_corners", "avg_yellow_cards", "avg_fouls", "penalty_rate"]
+                if c in st_df.columns
+            ]
+            merged = base_df.merge(
+                st_df[["team"] + enrich_cols],
+                on="team",
+                how="left",
+                suffixes=("_base", "_st"),
+            )
+
+            # Предпочитаем Smart Tables там, где данные есть
+            for col in enrich_cols:
+                st_col = f"{col}_st"
+                base_col = f"{col}_base"
+                if st_col in merged.columns:
+                    merged[col] = merged[st_col].combine_first(merged[base_col])
+                    merged.drop(columns=[st_col, base_col], errors="ignore", inplace=True)
+
+            merged["source"] = "smart-tables.ru"
+            return merged
+
+        except Exception as e:
+            logger.warning(f"Smart Tables: ошибка обогащения данных команд: {e}")
+            base_df["source"] = "synthetic"
+            return base_df
 
     def get_h2h_stats(
         self, matches_df: pd.DataFrame, home_team: str, away_team: str
@@ -522,3 +631,471 @@ class TeamStatsCollector:
             if "medical_exits" in h2h.columns
             else 1.8,
         }
+
+
+class SmartTablesScraper:
+    """
+    Сборщик данных с Smart Tables (smart-tables.ru)
+    Источник: статистика команд и судей РПЛ
+    Страницы:
+      - /league/russia/premier_league  — статистика команд
+      - /referee                       — статистика судей (фильтр по РПЛ)
+    """
+
+    BASE_URL = "https://smart-tables.ru"
+    RPL_URL = "https://smart-tables.ru/league/russia/premier_league"
+    REFEREE_URL = "https://smart-tables.ru/referee"
+
+    # Заголовки, имитирующие браузер
+    HEADERS = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        ),
+        "Accept": (
+            "text/html,application/xhtml+xml,application/xml;"
+            "q=0.9,image/avif,image/webp,*/*;q=0.8"
+        ),
+        "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Cache-Control": "max-age=0",
+    }
+
+    # Русские названия команд РПЛ → нормализованные
+    TEAM_NAME_MAP = {
+        "Зенит": "Зенит",
+        "ЦСКА": "ЦСКА",
+        "Спартак": "Спартак",
+        "Локомотив": "Локомотив",
+        "Краснодар": "Краснодар",
+        "Динамо": "Динамо",
+        "Рубин": "Рубин",
+        "Ростов": "Ростов",
+        "Факел": "Факел",
+        "Оренбург": "Оренбург",
+        "Химки": "Химки",
+        "Ахмат": "Ахмат",
+        "Сочи": "Сочи",
+        "Пари НН": "Пари НН",
+        "Урал": "Урал",
+        "Крылья Советов": "Крылья Советов",
+        # Альтернативные названия
+        "Нижний Новгород": "Пари НН",
+        "Крылья": "Крылья Советов",
+    }
+
+    def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update(self.HEADERS)
+        self._session_initialized = False
+
+    # ------------------------------------------------------------------
+    # Публичный интерфейс
+    # ------------------------------------------------------------------
+
+    def get_rpl_team_stats(self) -> pd.DataFrame:
+        """
+        Получить статистику команд РПЛ текущего сезона.
+        Возвращает DataFrame с колонками:
+          team, avg_corners, avg_yellow_cards, avg_fouls, penalty_rate, source
+        """
+        cache_path = CACHE_DIR / "smart_tables_team_stats.csv"
+        cached = self._load_cache(cache_path, ttl_hours=6)
+        if cached is not None:
+            logger.info("Smart Tables: статистика команд загружена из кеша")
+            return cached
+
+        self._init_session()
+        html = self._fetch(self.RPL_URL)
+        if not html:
+            logger.warning("Smart Tables: не удалось получить страницу лиги РПЛ")
+            return pd.DataFrame()
+
+        df = self._parse_league_page(html)
+        if not df.empty:
+            df.to_csv(cache_path, index=False, encoding="utf-8")
+            logger.info(f"Smart Tables: команд загружено {len(df)}")
+        return df
+
+    def get_rpl_referee_stats(self) -> pd.DataFrame:
+        """
+        Получить статистику судей РПЛ текущего сезона.
+        Возвращает DataFrame с колонками:
+          referee, matches_count, avg_yellow_cards, avg_fouls,
+          avg_penalties, strictness_index, penalty_index, source
+        """
+        cache_path = CACHE_DIR / "smart_tables_referee_stats.csv"
+        cached = self._load_cache(cache_path, ttl_hours=6)
+        if cached is not None:
+            logger.info("Smart Tables: статистика судей загружена из кеша")
+            return cached
+
+        self._init_session()
+
+        # Пробуем URL судей с фильтром по лиге
+        for url in [
+            f"{self.REFEREE_URL}/russia/premier_league",
+            f"{self.REFEREE_URL}?league=russia&competition=premier_league",
+            self.REFEREE_URL,
+        ]:
+            html = self._fetch(url, referer=self.RPL_URL)
+            if html:
+                df = self._parse_referee_page(html)
+                if not df.empty:
+                    df.to_csv(cache_path, index=False, encoding="utf-8")
+                    logger.info(f"Smart Tables: судей загружено {len(df)}")
+                    return df
+
+        logger.warning("Smart Tables: не удалось получить статистику судей")
+        return pd.DataFrame()
+
+    # ------------------------------------------------------------------
+    # Парсинг страниц
+    # ------------------------------------------------------------------
+
+    def _parse_league_page(self, html: str) -> pd.DataFrame:
+        """Разобрать страницу лиги РПЛ"""
+        # 1. Попытка извлечь данные из встроенного JSON (Nuxt/Next/Vue)
+        df = self._extract_from_json(html, data_type="teams")
+        if not df.empty:
+            return df
+
+        # 2. Парсинг HTML-таблицы
+        soup = BeautifulSoup(html, "html.parser")
+        return self._parse_stats_table(soup, data_type="teams")
+
+    def _parse_referee_page(self, html: str) -> pd.DataFrame:
+        """Разобрать страницу статистики судей"""
+        # 1. Попытка извлечь данные из встроенного JSON
+        df = self._extract_from_json(html, data_type="referees")
+        if not df.empty:
+            return df
+
+        # 2. Парсинг HTML-таблицы
+        soup = BeautifulSoup(html, "html.parser")
+        return self._parse_stats_table(soup, data_type="referees")
+
+    def _extract_from_json(self, html: str, data_type: str) -> pd.DataFrame:
+        """
+        Извлечь данные из встроенного JSON на странице.
+        Ищет: window.__NUXT__, window.__NEXT_DATA__, window.initialData,
+               __STATE__, data-page и другие паттерны.
+        """
+        patterns = [
+            r"window\.__NUXT__\s*=\s*(\{.*?\});?\s*</script>",
+            r"window\.__NEXT_DATA__\s*=\s*(\{.*?\})\s*</script>",
+            r"window\.initialData\s*=\s*(\{.*?\});?\s*</script>",
+            r"window\.__STATE__\s*=\s*(\{.*?\});?\s*</script>",
+            r"<script[^>]+id=[\"']__NUXT_DATA__[\"'][^>]*>(\[.*?\])</script>",
+        ]
+
+        for pattern in patterns:
+            matches = re.findall(pattern, html, re.DOTALL)
+            for raw in matches:
+                try:
+                    data = json.loads(raw)
+                    df = self._json_to_dataframe(data, data_type)
+                    if not df.empty:
+                        return df
+                except (json.JSONDecodeError, Exception):
+                    continue
+
+        # Поиск JSON массивов в inline-скриптах
+        script_jsons = re.findall(
+            r'"(?:teams|referees|stats|rows?)"\s*:\s*(\[.*?\])',
+            html, re.DOTALL
+        )
+        for raw in script_jsons:
+            try:
+                items = json.loads(raw)
+                if items and isinstance(items, list):
+                    df = pd.DataFrame(items)
+                    normalized = self._normalize_json_df(df, data_type)
+                    if not normalized.empty:
+                        return normalized
+            except (json.JSONDecodeError, Exception):
+                continue
+
+        return pd.DataFrame()
+
+    def _json_to_dataframe(self, data: dict, data_type: str) -> pd.DataFrame:
+        """Конвертировать JSON данные в DataFrame нужного формата"""
+        if not isinstance(data, dict):
+            return pd.DataFrame()
+
+        # Обходим вложенные структуры в поисках списков команд/судей
+        candidates = []
+
+        def find_lists(obj, depth=0):
+            if depth > 8:
+                return
+            if isinstance(obj, list) and len(obj) >= 5:
+                candidates.append(obj)
+            elif isinstance(obj, dict):
+                for v in obj.values():
+                    find_lists(v, depth + 1)
+
+        find_lists(data)
+
+        for items in candidates:
+            if not items or not isinstance(items[0], dict):
+                continue
+            df = pd.DataFrame(items)
+            normalized = self._normalize_json_df(df, data_type)
+            if not normalized.empty:
+                return normalized
+
+        return pd.DataFrame()
+
+    def _normalize_json_df(self, df: pd.DataFrame, data_type: str) -> pd.DataFrame:
+        """Привести JSON DataFrame к стандартному формату"""
+        if data_type == "teams":
+            return self._normalize_team_json(df)
+        elif data_type == "referees":
+            return self._normalize_referee_json(df)
+        return pd.DataFrame()
+
+    def _normalize_team_json(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Нормализация JSON данных команд"""
+        # Маппинг возможных имен полей
+        field_candidates = {
+            "team": ["team", "name", "teamName", "club", "title"],
+            "avg_corners": ["corners", "avgCorners", "avg_corners", "corner"],
+            "avg_yellow_cards": ["yellowCards", "avg_yellow", "yc", "yellow", "ЖК"],
+            "avg_fouls": ["fouls", "avgFouls", "avg_fouls", "foul"],
+            "penalty_rate": ["penalty", "penalties", "penaltyRate", "pen"],
+        }
+
+        result = {}
+        for target, candidates in field_candidates.items():
+            for c in candidates:
+                if c in df.columns:
+                    result[target] = df[c]
+                    break
+
+        if "team" not in result:
+            return pd.DataFrame()
+
+        out = pd.DataFrame(result)
+        out["source"] = "smart-tables.ru"
+        # Нормализация названий команд
+        if "team" in out.columns:
+            out["team"] = out["team"].apply(
+                lambda x: self.TEAM_NAME_MAP.get(str(x).strip(), str(x).strip())
+            )
+        return out
+
+    def _normalize_referee_json(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Нормализация JSON данных судей"""
+        field_candidates = {
+            "referee": ["referee", "name", "refereeName", "судья"],
+            "matches_count": ["matches", "matchesCount", "gamesCount", "games"],
+            "avg_yellow_cards": ["yellowCards", "avgYellow", "yc", "yellow"],
+            "avg_fouls": ["fouls", "avgFouls"],
+            "avg_penalties": ["penalties", "avgPenalties", "pen"],
+        }
+
+        result = {}
+        for target, candidates in field_candidates.items():
+            for c in candidates:
+                if c in df.columns:
+                    result[target] = df[c]
+                    break
+
+        if "referee" not in result:
+            return pd.DataFrame()
+
+        out = pd.DataFrame(result)
+        out["source"] = "smart-tables.ru"
+        out = self._add_referee_indices(out)
+        return out
+
+    def _parse_stats_table(self, soup: BeautifulSoup, data_type: str) -> pd.DataFrame:
+        """Разобрать HTML-таблицу статистики"""
+        # Ищем таблицы с данными
+        tables = soup.find_all("table")
+        if not tables:
+            # Попробуем div-based таблицы (SPA сайты часто используют их)
+            tables = soup.find_all(
+                ["div", "section"],
+                class_=re.compile(r"table|grid|stats|stat|row", re.I)
+            )
+
+        for table in tables:
+            rows = table.find_all("tr") if table.name == "table" else []
+            if len(rows) < 3:
+                continue
+
+            # Заголовки
+            header_row = rows[0]
+            headers = [
+                th.get_text(strip=True).lower()
+                for th in header_row.find_all(["th", "td"])
+            ]
+
+            if not headers:
+                continue
+
+            # Данные строк
+            data_rows = []
+            for row in rows[1:]:
+                cells = row.find_all(["td", "th"])
+                if cells:
+                    data_rows.append([c.get_text(strip=True) for c in cells])
+
+            if not data_rows:
+                continue
+
+            df = pd.DataFrame(data_rows, columns=headers[:len(data_rows[0])])
+
+            if data_type == "teams":
+                normalized = self._normalize_team_table(df)
+            else:
+                normalized = self._normalize_referee_table(df)
+
+            if not normalized.empty:
+                return normalized
+
+        return pd.DataFrame()
+
+    def _normalize_team_table(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Нормализовать HTML-таблицу команд"""
+        # Маппинг заголовков таблицы (на русском и английском)
+        col_map = {}
+        for col in df.columns:
+            col_lower = col.lower().strip()
+            if any(k in col_lower for k in ["команда", "team", "клуб"]):
+                col_map[col] = "team"
+            elif any(k in col_lower for k in ["угл", "corner", "ук"]):
+                col_map[col] = "avg_corners"
+            elif any(k in col_lower for k in ["жёлт", "yellow", "жк", "ж.к"]):
+                col_map[col] = "avg_yellow_cards"
+            elif any(k in col_lower for k in ["фол", "foul", "нарушен"]):
+                col_map[col] = "avg_fouls"
+            elif any(k in col_lower for k in ["пенальт", "penalty", "пен"]):
+                col_map[col] = "penalty_rate"
+
+        if "team" not in col_map.values():
+            return pd.DataFrame()
+
+        df = df.rename(columns=col_map)
+        keep = [c for c in ["team", "avg_corners", "avg_yellow_cards",
+                             "avg_fouls", "penalty_rate"] if c in df.columns]
+        out = df[keep].copy()
+
+        # Конвертация числовых полей
+        for col in keep:
+            if col != "team":
+                out[col] = pd.to_numeric(out[col].str.replace(",", "."), errors="coerce")
+
+        out["team"] = out["team"].apply(
+            lambda x: self.TEAM_NAME_MAP.get(str(x).strip(), str(x).strip())
+        )
+        out["source"] = "smart-tables.ru"
+        return out.dropna(subset=["team"])
+
+    def _normalize_referee_table(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Нормализовать HTML-таблицу судей"""
+        col_map = {}
+        for col in df.columns:
+            col_lower = col.lower().strip()
+            if any(k in col_lower for k in ["судья", "referee", "арбитр"]):
+                col_map[col] = "referee"
+            elif any(k in col_lower for k in ["матч", "игр", "match", "game"]):
+                col_map[col] = "matches_count"
+            elif any(k in col_lower for k in ["жёлт", "yellow", "жк"]):
+                col_map[col] = "avg_yellow_cards"
+            elif any(k in col_lower for k in ["фол", "foul"]):
+                col_map[col] = "avg_fouls"
+            elif any(k in col_lower for k in ["пенальт", "penalty"]):
+                col_map[col] = "avg_penalties"
+
+        if "referee" not in col_map.values():
+            return pd.DataFrame()
+
+        df = df.rename(columns=col_map)
+        keep = [c for c in ["referee", "matches_count", "avg_yellow_cards",
+                             "avg_fouls", "avg_penalties"] if c in df.columns]
+        out = df[keep].copy()
+
+        for col in keep:
+            if col != "referee":
+                out[col] = pd.to_numeric(out[col].str.replace(",", "."), errors="coerce")
+
+        out["source"] = "smart-tables.ru"
+        out = self._add_referee_indices(out)
+        return out.dropna(subset=["referee"])
+
+    def _add_referee_indices(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Добавить производные индексы (строгость, пенальти)"""
+        if "avg_yellow_cards" in df.columns and df["avg_yellow_cards"].notna().any():
+            avg = df["avg_yellow_cards"].mean()
+            if avg > 0:
+                df["strictness_index"] = df["avg_yellow_cards"] / avg
+
+        if "avg_penalties" in df.columns and df["avg_penalties"].notna().any():
+            avg = df["avg_penalties"].mean()
+            if avg > 0:
+                df["penalty_index"] = df["avg_penalties"] / avg
+
+        return df
+
+    # ------------------------------------------------------------------
+    # Сетевые утилиты
+    # ------------------------------------------------------------------
+
+    def _init_session(self):
+        """Инициализировать сессию: получить cookies с главной страницы"""
+        if self._session_initialized:
+            return
+        try:
+            resp = self.session.get(
+                self.BASE_URL, timeout=15, allow_redirects=True
+            )
+            if resp.status_code == 200:
+                self._session_initialized = True
+                logger.debug("Smart Tables: сессия инициализирована")
+        except Exception as e:
+            logger.debug(f"Smart Tables: не удалось инициализировать сессию: {e}")
+
+    def _fetch(self, url: str, referer: str = None) -> Optional[str]:
+        """Выполнить GET-запрос с правильными заголовками"""
+        headers = {}
+        if referer:
+            headers["Referer"] = referer
+        else:
+            headers["Referer"] = self.BASE_URL
+
+        try:
+            resp = self.session.get(url, headers=headers, timeout=20)
+            if resp.status_code == 200:
+                logger.debug(f"Smart Tables: загружено {url}")
+                return resp.text
+            logger.warning(
+                f"Smart Tables: {url} вернул статус {resp.status_code}"
+            )
+        except Exception as e:
+            logger.warning(f"Smart Tables: ошибка при запросе {url}: {e}")
+        return None
+
+    @staticmethod
+    def _load_cache(path: Path, ttl_hours: int = 6) -> Optional[pd.DataFrame]:
+        """Загрузить из кеша если файл не старше ttl_hours"""
+        if not path.exists():
+            return None
+        age_hours = (
+            datetime.now().timestamp() - path.stat().st_mtime
+        ) / 3600
+        if age_hours > ttl_hours:
+            return None
+        try:
+            df = pd.read_csv(path, encoding="utf-8")
+            return df if not df.empty else None
+        except Exception:
+            return None
