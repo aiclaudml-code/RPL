@@ -113,6 +113,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 /* PROBABILITY BAR */
 .prob-bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:6px}
+.schedule-match{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:10px 14px;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:12px}
+.schedule-match:hover{border-color:var(--accent);background:rgba(92,110,248,.08)}
+.schedule-match.selected{border-color:var(--accent);background:rgba(92,110,248,.12)}
+.sched-time{font-size:11px;color:var(--muted);min-width:38px}
+.sched-teams{flex:1;font-size:13px;font-weight:600}
+.sched-ref{font-size:11px;color:var(--muted)}
+.sched-date-label{font-size:11px;color:var(--muted);font-weight:600;margin:10px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+
 .prob-fill{height:100%;border-radius:4px;transition:width .5s ease}
 
 /* SECTION HEADER */
@@ -157,8 +166,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <!-- NAV -->
   <div class="nav">
     <button class="nav-btn active" onclick="showPage('analysis')">📊 Анализ матча</button>
-    <button class="nav-btn" onclick="showPage('valuebets')">🔥 Ценные ставки</button>
-    <button class="nav-btn" onclick="showPage('calculator')">🧮 Калькулятор</button>
     <button class="nav-btn" onclick="showPage('teams')">📋 Команды</button>
     <button class="nav-btn" onclick="showPage('referees')">👤 Судьи</button>
   </div>
@@ -169,6 +176,16 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div id="page-analysis" class="page active">
     <div class="section-header">
       <div class="section-title">Анализ матча</div>
+      <div style="font-size:13px;color:var(--muted)">РПЛ 2025/2026</div>
+    </div>
+
+    <!-- Ближайший тур -->
+    <div class="card" id="schedule-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-weight:700;font-size:15px">📅 Тур 22 · 14–16 марта 2026</div>
+        <div style="font-size:12px;color:var(--muted)">Нажмите на матч для быстрого анализа</div>
+      </div>
+      <div id="schedule-grid"></div>
     </div>
 
     <div class="card">
@@ -258,110 +275,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 
   <!-- ============================================================ -->
-  <!-- PAGE: VALUE BETS -->
-  <!-- ============================================================ -->
-  <div id="page-valuebets" class="page">
-    <div class="section-header">
-      <div class="section-title">🔥 Ценные ставки (Value Bets)</div>
-    </div>
-
-    <div class="info-box">
-      <strong>Value = (Вероятность модели × Коэффициент) − 1</strong><br>
-      Value &gt; 5% = хорошая ставка &nbsp;|&nbsp; Value &gt; 15% = <strong>сильная ставка</strong><br>
-      Здесь показаны случаи, где букмекер недооценивает или переоценивает вероятность события.
-    </div>
-
-    <div class="card">
-      <div class="grid-3">
-        <div class="form-group">
-          <label class="form-label">Минимальный Value (%)</label>
-          <input type="range" id="minValue" min="0" max="30" value="5"
-            oninput="document.getElementById('minValueLabel').textContent=this.value+'%';renderValueBets()">
-          <div style="text-align:right;font-size:12px;color:var(--muted);margin-top:4px">
-            Порог: <span id="minValueLabel">5%</span>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Рынок</label>
-          <select id="vbMarket" onchange="renderValueBets()">
-            <option value="all">Все рынки</option>
-            <option value="yellow_cards">Желтые карточки</option>
-            <option value="corners">Угловые</option>
-            <option value="penalty">Пенальти</option>
-            <option value="medical">Медбригада</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Сортировка</label>
-          <select id="vbSort" onchange="renderValueBets()">
-            <option value="value_desc">Value (убыванием)</option>
-            <option value="value_asc">Value (возрастанием)</option>
-            <option value="odds_desc">Коэффициент (убыванием)</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div id="valuebets-container"></div>
-  </div>
-
-  <!-- ============================================================ -->
-  <!-- PAGE: CALCULATOR -->
-  <!-- ============================================================ -->
-  <div id="page-calculator" class="page">
-    <div class="section-header">
-      <div class="section-title">🧮 Калькулятор ставок</div>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-title">⚙️ Параметры ставки</div>
-        <div class="form-group">
-          <label class="form-label">Банкролл (₽)</label>
-          <input type="number" id="bankroll" value="10000" min="100" oninput="calcBet()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Сумма ставки (₽)</label>
-          <input type="number" id="betAmount" value="500" min="10" oninput="calcBet()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Коэффициент букмекера</label>
-          <input type="number" id="betOdds" value="1.85" min="1.01" step="0.01" oninput="calcBet()">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Вероятность модели: <span id="probLabel">55%</span></label>
-          <input type="range" id="betProb" min="1" max="99" value="55"
-            oninput="document.getElementById('probLabel').textContent=this.value+'%';calcBet()">
-        </div>
-        <hr style="border-color:var(--border);margin:16px 0">
-        <div class="form-group">
-          <label class="form-label">Количество ставок для симуляции</label>
-          <input type="range" id="nBets" min="10" max="500" value="100"
-            oninput="document.getElementById('nBetsLabel').textContent=this.value;calcBet()">
-          <div style="text-align:right;font-size:12px;color:var(--muted);margin-top:4px">
-            <span id="nBetsLabel">100</span> ставок
-          </div>
-        </div>
-        <button class="btn btn-primary btn-block" onclick="runMonteCarlo()">
-          🎲 Симуляция Монте-Карло
-        </button>
-      </div>
-
-      <div>
-        <div class="card">
-          <div class="card-title">📈 Результаты расчёта</div>
-          <div id="calc-results"></div>
-        </div>
-        <div class="card" id="mc-card" style="display:none">
-          <div class="card-title">🎲 Результаты симуляции</div>
-          <div id="mc-results"></div>
-          <div id="mc-chart" style="height:280px;margin-top:12px"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============================================================ -->
   <!-- PAGE: TEAMS -->
   <!-- ============================================================ -->
   <div id="page-teams" class="page">
@@ -406,8 +319,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="section-title">👤 Статистика судей РПЛ</div>
     </div>
     <div class="info-box">
-      <strong>Индекс строгости &gt; 1.0</strong> — судья строже среднего (больше ЖК) &nbsp;|&nbsp;
-      <strong>Индекс пенальти &gt; 1.0</strong> — судья чаще назначает пенальти
+      Сезон <strong>2025/2026</strong> · Источник: <a href="https://smart-tables.ru/referee" target="_blank">smart-tables.ru</a> &nbsp;|&nbsp;
+      Строгость <strong>&gt; 1.0</strong> = судья строже среднего &nbsp;|&nbsp; Индекс пенальти <strong>&gt; 1.0</strong> = назначает пенальти чаще
     </div>
     <div class="grid-2">
       <div class="card">
@@ -453,29 +366,30 @@ const TEAMS = {
   "Крылья Советов": {avg_yellow:1.76,avg_yellow_h:1.59,avg_yellow_a:1.93,avg_corners:4.4,avg_corners_h:4.8,avg_corners_a:4.0,penalty_rate:0.27,avg_fouls:13.4,avg_medical:0.98,avg_goals:1.3,avg_goals_c:1.3},
 };
 
+// Судьи РПЛ сезона 2025/2026 (источник: smart-tables.ru)
 const REFEREES = {
-  "Казарцев С.":   {matches:42,avg_yc:3.86,avg_corners:9.4,penalty_rate:0.34,strictness:1.24,pen_index:1.21},
-  "Левников С.":   {matches:38,avg_yc:3.74,avg_corners:9.8,penalty_rate:0.32,strictness:1.20,pen_index:1.14},
-  "Матюнин А.":    {matches:45,avg_yc:3.52,avg_corners:9.9,penalty_rate:0.29,strictness:1.13,pen_index:1.04},
-  "Карасев С.":    {matches:40,avg_yc:3.48,avg_corners:10.1,penalty_rate:0.28,strictness:1.12,pen_index:1.00},
-  "Чистяков Е.":   {matches:35,avg_yc:3.40,avg_corners:9.7,penalty_rate:0.28,strictness:1.09,pen_index:1.00},
-  "Панин А.":      {matches:48,avg_yc:3.28,avg_corners:9.8,penalty_rate:0.27,strictness:1.05,pen_index:0.96},
-  "Иванов И.":     {matches:36,avg_yc:3.14,avg_corners:10.0,penalty_rate:0.27,strictness:1.01,pen_index:0.96},
-  "Москалев А.":   {matches:41,avg_yc:3.10,avg_corners:9.9,penalty_rate:0.26,strictness:1.00,pen_index:0.93},
-  "Лапочкин С.":   {matches:44,avg_yc:3.02,avg_corners:9.6,penalty_rate:0.26,strictness:0.97,pen_index:0.93},
-  "Вилков В.":     {matches:39,avg_yc:2.86,avg_corners:10.2,penalty_rate:0.24,strictness:0.92,pen_index:0.86},
-  "Безбородов А.": {matches:33,avg_yc:2.74,avg_corners:10.4,penalty_rate:0.23,strictness:0.88,pen_index:0.82},
-  "Еськов А.":     {matches:30,avg_yc:2.62,avg_corners:10.1,penalty_rate:0.22,strictness:0.84,pen_index:0.79},
+  "Карасев С.":    {matches:35,avg_yc:4.60,avg_corners:9.9,penalty_rate:0.34,strictness:1.28,pen_index:1.22},
+  "Левников С.":   {matches:35,avg_yc:3.97,avg_corners:9.9,penalty_rate:0.23,strictness:1.11,pen_index:0.81},
+  "Матюнин А.":    {matches:38,avg_yc:3.53,avg_corners:10.3,penalty_rate:0.29,strictness:0.98,pen_index:1.02},
+  "Москалев А.":   {matches:38,avg_yc:3.42,avg_corners:10.0,penalty_rate:0.18,strictness:0.95,pen_index:0.65},
+  "Безбородов А.": {matches:35,avg_yc:3.43,avg_corners:9.6,penalty_rate:0.26,strictness:0.95,pen_index:0.91},
+  "Лапочкин С.":   {matches:25,avg_yc:3.40,avg_corners:8.7,penalty_rate:0.28,strictness:0.95,pen_index:0.99},
+  "Чистяков Е.":   {matches:38,avg_yc:3.24,avg_corners:8.7,penalty_rate:0.39,strictness:0.90,pen_index:1.40},
+  "Вилков В.":     {matches:35,avg_yc:3.14,avg_corners:9.1,penalty_rate:0.29,strictness:0.88,pen_index:1.01},
 };
 
-// Предстоящие матчи для Value Bets (демо)
+// Тур 22 РПЛ 2025/2026 · 14–16 марта 2026
+const SCHEDULE_ROUND = 22;
+const SCHEDULE_DATES = "14–16 марта 2026";
 const UPCOMING_MATCHES = [
-  {home:"Зенит",    away:"ЦСКА",    referee:"Казарцев С.",  bk_yc_line:3.5,bk_yc_over_odds:1.90,bk_yc_under_odds:1.90,bk_c_line:10.5,bk_c_over_odds:1.82,bk_c_under_odds:2.00,bk_pen_yes:3.10,bk_pen_no:1.35},
-  {home:"Спартак",  away:"Краснодар",referee:"Лапочкин С.",bk_yc_line:3.5,bk_yc_over_odds:1.85,bk_yc_under_odds:1.95,bk_c_line:9.5, bk_c_over_odds:1.92,bk_c_under_odds:1.88,bk_pen_yes:3.40,bk_pen_no:1.28},
-  {home:"Локомотив",away:"Динамо",   referee:"Вилков В.",   bk_yc_line:3.5,bk_yc_over_odds:1.95,bk_yc_under_odds:1.85,bk_c_line:9.5, bk_c_over_odds:1.88,bk_c_under_odds:1.92,bk_pen_yes:4.00,bk_pen_no:1.22},
-  {home:"Ростов",   away:"Рубин",    referee:"Матюнин А.",  bk_yc_line:4.5,bk_yc_over_odds:1.80,bk_yc_under_odds:2.00,bk_c_line:8.5, bk_c_over_odds:1.95,bk_c_under_odds:1.85,bk_pen_yes:3.80,bk_pen_no:1.24},
-  {home:"Краснодар",away:"Зенит",    referee:"Карасев С.",  bk_yc_line:3.5,bk_yc_over_odds:1.88,bk_yc_under_odds:1.92,bk_c_line:10.5,bk_c_over_odds:1.85,bk_c_under_odds:1.95,bk_pen_yes:3.20,bk_pen_no:1.32},
-  {home:"Факел",    away:"Ахмат",    referee:"Левников С.", bk_yc_line:4.5,bk_yc_over_odds:1.75,bk_yc_under_odds:2.05,bk_c_line:7.5, bk_c_over_odds:1.78,bk_c_under_odds:2.02,bk_pen_yes:4.50,bk_pen_no:1.20},
+  {date:"14.03",time:"14:00",home:"Зенит",       away:"Спартак",         referee:"Карасев С."},
+  {date:"14.03",time:"16:30",home:"ЦСКА",         away:"Краснодар",       referee:"Матюнин А."},
+  {date:"15.03",time:"13:00",home:"Ахмат",        away:"Химки",           referee:"Безбородов А."},
+  {date:"15.03",time:"13:00",home:"Урал",         away:"Факел",           referee:"Чистяков Е."},
+  {date:"15.03",time:"15:30",home:"Локомотив",    away:"Ростов",          referee:"Левников С."},
+  {date:"15.03",time:"15:30",home:"Оренбург",     away:"Рубин",           referee:"Лапочкин С."},
+  {date:"16.03",time:"13:00",home:"Динамо",       away:"Крылья Советов",  referee:"Вилков В."},
+  {date:"16.03",time:"15:30",home:"Пари НН",      away:"Сочи",            referee:"Москалев А."},
 ];
 
 // ================================================================
@@ -554,148 +468,9 @@ function predictMatch(homeName, awayName, refName) {
   };
 }
 
-// ================================================================
-// VALUE BET FINDER
-// ================================================================
-function findValueBets(match, bkOdds) {
-  const bets = [];
-  const {yc, corners, penalty} = predictMatch(match.home, match.away, match.referee);
 
-  // YC over
-  const ycProb = pOver(yc.expected, bkOdds.yc_line);
-  const ycVal  = ycProb * bkOdds.yc_over_odds - 1;
-  bets.push({market:"Желтые карточки",type:`Больше ${bkOdds.yc_line}`,
-    odds:bkOdds.yc_over_odds,modelProb:ycProb,value:ycVal});
 
-  const ycUnderProb = pUnder(yc.expected, bkOdds.yc_line);
-  const ycUnderVal  = ycUnderProb * bkOdds.yc_under_odds - 1;
-  bets.push({market:"Желтые карточки",type:`Меньше ${bkOdds.yc_line}`,
-    odds:bkOdds.yc_under_odds,modelProb:ycUnderProb,value:ycUnderVal});
 
-  // Corners over
-  const cProb = pOver(corners.expected, bkOdds.c_line);
-  const cVal  = cProb * bkOdds.c_over_odds - 1;
-  bets.push({market:"Угловые",type:`Больше ${bkOdds.c_line}`,
-    odds:bkOdds.c_over_odds,modelProb:cProb,value:cVal});
-
-  const cUnderProb = pUnder(corners.expected, bkOdds.c_line);
-  const cUnderVal  = cUnderProb * bkOdds.c_under_odds - 1;
-  bets.push({market:"Угловые",type:`Меньше ${bkOdds.c_line}`,
-    odds:bkOdds.c_under_odds,modelProb:cUnderProb,value:cUnderVal});
-
-  // Penalty yes/no
-  const pYesVal = penalty.prob * bkOdds.pen_yes - 1;
-  bets.push({market:"Пенальти",type:"Да",odds:bkOdds.pen_yes,modelProb:penalty.prob,value:pYesVal});
-  const pNoVal  = (1-penalty.prob) * bkOdds.pen_no - 1;
-  bets.push({market:"Пенальти",type:"Нет",odds:bkOdds.pen_no,modelProb:1-penalty.prob,value:pNoVal});
-
-  return bets.map(b => ({
-    ...b,
-    match: `${match.home} — ${match.away}`,
-    recommendation: b.value >= 0.15 ? "Сильная ставка"
-                  : b.value >= 0.05 ? "Хорошая ставка"
-                  : b.value >= -0.02 ? "Нейтрально"
-                  : "Избегать",
-    kelly: Math.max(0, ((b.odds-1)*b.modelProb - (1-b.modelProb))/(b.odds-1)) * 0.25,
-  }));
-}
-
-// ================================================================
-// KELLY & CALCULATOR
-// ================================================================
-function kellyBet(prob, odds, fraction=0.25) {
-  const b = odds - 1;
-  const k = (b * prob - (1-prob)) / b;
-  return Math.max(0, k * fraction);
-}
-
-function calcBet() {
-  const bankroll = +document.getElementById('bankroll').value || 10000;
-  const amount   = +document.getElementById('betAmount').value || 500;
-  const odds     = +document.getElementById('betOdds').value || 1.85;
-  const prob     = (+document.getElementById('betProb').value || 55) / 100;
-
-  const win       = amount * odds;
-  const profit    = win - amount;
-  const ev        = prob * win - amount;
-  const roi       = ev / amount * 100;
-  const value     = prob * odds - 1;
-  const kelly     = kellyBet(prob, odds, 1.0) * bankroll;
-  const kellyQ    = kellyBet(prob, odds, 0.25) * bankroll;
-  const breakeven = 1/odds;
-  const fraction  = amount/bankroll;
-  const risk = fraction<=0.01?"Очень низкий":fraction<=0.02?"Низкий":fraction<=0.05?"Средний":fraction<=0.10?"Высокий":"Очень высокий";
-
-  const rows = [
-    ["Потенциальный выигрыш", `${win.toFixed(0)} ₽`],
-    ["Чистая прибыль при победе", `+${profit.toFixed(0)} ₽`],
-    ["Ожидаемое значение (EV)", `${ev>=0?'+':''}${ev.toFixed(0)} ₽`],
-    ["Ожидаемый ROI", `<span class="${roi>=0?'value-pos':'value-neg'}">${roi>=0?'+':''}${roi.toFixed(1)}%</span>`],
-    ["Value", `<span class="${value>=0?'value-pos':'value-neg'}">${value>=0?'+':''}${(value*100).toFixed(1)}%</span>`],
-    ["Вероятность прохода", `${(prob*100).toFixed(1)}%`],
-    ["Точка безубыточности", `${(breakeven*100).toFixed(1)}%`],
-    ["Ставка Келли (полная)", `${kelly.toFixed(0)} ₽`],
-    ["Ставка Келли (¼)", `${kellyQ.toFixed(0)} ₽`],
-    ["% от банкролла", `${(fraction*100).toFixed(1)}%`],
-    ["Уровень риска", risk],
-  ];
-
-  document.getElementById('calc-results').innerHTML =
-    `<table>${rows.map(([l,v])=>`<tr><td style="color:var(--muted);padding:8px 4px;font-size:13px">${l}</td><td style="text-align:right;padding:8px 4px;font-weight:600">${v}</td></tr>`).join('')}</table>`;
-}
-
-function runMonteCarlo() {
-  const bankroll = +document.getElementById('bankroll').value || 10000;
-  const amount   = +document.getElementById('betAmount').value || 500;
-  const odds     = +document.getElementById('betOdds').value || 1.85;
-  const prob     = (+document.getElementById('betProb').value || 55) / 100;
-  const nBets    = +document.getElementById('nBets').value || 100;
-
-  const N = 2000;
-  const finals = [];
-  for (let s = 0; s < N; s++) {
-    let br = bankroll;
-    for (let b = 0; b < nBets; b++) {
-      if (br <= 0) break;
-      const bet = Math.min(amount, br);
-      br += Math.random() < prob ? bet*(odds-1) : -bet;
-    }
-    finals.push(br);
-  }
-
-  finals.sort((a,b)=>a-b);
-  const mean   = finals.reduce((a,b)=>a+b,0)/N;
-  const median = finals[Math.floor(N/2)];
-  const p10    = finals[Math.floor(N*0.10)];
-  const p90    = finals[Math.floor(N*0.90)];
-  const pProfit = finals.filter(x=>x>bankroll).length/N;
-  const pRuin   = finals.filter(x=>x<=0).length/N;
-
-  document.getElementById('mc-card').style.display='block';
-  document.getElementById('mc-results').innerHTML = `
-    <div class="grid-4" style="margin-bottom:12px">
-      ${[
-        ["Среднее", mean.toFixed(0)+" ₽"],
-        ["Медиана", median.toFixed(0)+" ₽"],
-        ["Вер-сть прибыли", (pProfit*100).toFixed(1)+"%"],
-        ["Риск разорения", (pRuin*100).toFixed(1)+"%"],
-      ].map(([l,v])=>`<div class="metric"><div class="metric-value" style="font-size:20px">${v}</div><div class="metric-label">${l}</div></div>`).join('')}
-    </div>`;
-
-  const barColors = [p10<bankroll?'#ef4444':'#22c55e','#f59e0b','#5c6ef8',p90>bankroll?'#22c55e':'#ef4444'];
-  Plotly.newPlot('mc-chart', [{
-    type:'bar', x:['P10 (пессимист)','Медиана','Среднее','P90 (оптимист)'],
-    y:[p10,median,mean,p90], marker:{color:barColors},
-    text:[p10,median,mean,p90].map(v=>v.toFixed(0)+'₽'), textposition:'outside'
-  }], {
-    paper_bgcolor:'transparent',plot_bgcolor:'transparent',
-    font:{color:'#94a3b8',size:11},
-    shapes:[{type:'line',x0:-0.5,x1:3.5,y0:bankroll,y1:bankroll,line:{color:'#94a3b8',dash:'dash'}}],
-    annotations:[{x:3.5,y:bankroll,text:'Старт',showarrow:false,font:{color:'#94a3b8',size:10},xanchor:'left'}],
-    yaxis:{gridcolor:'#2d3041',tickformat:'.0f'},
-    xaxis:{gridcolor:'#2d3041'},margin:{t:20,b:40,l:60,r:20},height:280
-  }, {responsive:true,displayModeBar:false});
-}
 
 // ================================================================
 // RENDER: ANALYSIS
@@ -833,74 +608,6 @@ function renderPenaltyDetails(prob) {
     </div>`;
 }
 
-// ================================================================
-// RENDER: VALUE BETS
-// ================================================================
-function renderValueBets() {
-  const minV = (+document.getElementById('minValue').value || 5) / 100;
-  const market = document.getElementById('vbMarket').value;
-  const sort = document.getElementById('vbSort').value;
-
-  let allBets = [];
-  UPCOMING_MATCHES.forEach(m => {
-    const bets = findValueBets(m, {
-      yc_line:m.bk_yc_line, yc_over_odds:m.bk_yc_over_odds, yc_under_odds:m.bk_yc_under_odds,
-      c_line:m.bk_c_line, c_over_odds:m.bk_c_over_odds, c_under_odds:m.bk_c_under_odds,
-      pen_yes:m.bk_pen_yes, pen_no:m.bk_pen_no,
-    });
-    allBets.push(...bets.map(b=>({...b,referee:m.referee})));
-  });
-
-  if (market !== 'all') {
-    const mMap = {yellow_cards:'Желтые карточки',corners:'Угловые',penalty:'Пенальти',medical:'Медбригада'};
-    allBets = allBets.filter(b=>b.market===mMap[market]);
-  }
-  allBets = allBets.filter(b=>b.value>=minV);
-
-  if (sort==='value_desc') allBets.sort((a,b)=>b.value-a.value);
-  else if (sort==='value_asc') allBets.sort((a,b)=>a.value-b.value);
-  else allBets.sort((a,b)=>b.odds-a.odds);
-
-  const container = document.getElementById('valuebets-container');
-  if (!allBets.length) {
-    container.innerHTML = `<div class="warn-box">Ценных ставок с Value ≥ ${(minV*100).toFixed(0)}% не найдено. Снизьте порог.</div>`;
-    return;
-  }
-
-  container.innerHTML = `<div class="success-box">Найдено ценных ставок: <strong>${allBets.length}</strong></div>` +
-  allBets.map(b=>{
-    const chip = b.recommendation==='Сильная ставка'?'chip-green':
-                 b.recommendation==='Хорошая ставка'?'chip-blue':
-                 b.recommendation==='Нейтрально'?'chip-yellow':'chip-red';
-    const icon = b.recommendation==='Сильная ставка'?'🔥':'✅';
-    const bkProb = (1/b.odds*100).toFixed(1);
-    return `<div class="card" style="border-left:4px solid ${b.value>=0.15?'var(--green)':'var(--accent)'}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-        <div>
-          <div style="font-weight:700;font-size:15px;margin-bottom:4px">${icon} ${b.match}</div>
-          <div style="color:var(--muted);font-size:13px">Судья: ${b.referee} · ${b.market}</div>
-        </div>
-        <span class="chip ${chip}">${b.recommendation}</span>
-      </div>
-      <div class="grid-4">
-        ${[
-          ['Ставка',`<strong>${b.type}</strong>`],
-          ['Коэффициент',`<strong>${b.odds.toFixed(2)}</strong>`],
-          ['Модель / БК',`<span class="value-pos">${(b.modelProb*100).toFixed(1)}%</span> / <span style="color:var(--muted)">${bkProb}%</span>`],
-          ['Value',`<span class="${b.value>=0?'value-pos':'value-neg'}">${b.value>=0?'+':''}${(b.value*100).toFixed(1)}%</span>`],
-        ].map(([l,v])=>`<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${l}</div>
-          <div style="font-size:14px">${v}</div>
-        </div>`).join('')}
-      </div>
-      <div style="margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--muted)">
-        Ставка Келли (¼): <strong>${(b.kelly*100).toFixed(2)}%</strong> банкролла &nbsp;·&nbsp;
-        Справедливый коэф: <strong>${fairOdds(b.modelProb)}</strong> &nbsp;·&nbsp;
-        Ожидаемый ROI: <strong class="${b.value>=0?'value-pos':'value-neg'}">${(b.value*100).toFixed(1)}%</strong>
-      </div>
-    </div>`;
-  }).join('');
-}
 
 // ================================================================
 // RENDER: TEAMS
@@ -1015,6 +722,57 @@ function renderRefCharts() {
 }
 
 // ================================================================
+// RENDER: SCHEDULE (Тур 22)
+// ================================================================
+function renderSchedule() {
+  const grid = document.getElementById('schedule-grid');
+  if (!grid) return;
+
+  // Group by date
+  const byDate = {};
+  UPCOMING_MATCHES.forEach(m => {
+    (byDate[m.date] = byDate[m.date] || []).push(m);
+  });
+
+  let html = '';
+  Object.entries(byDate).forEach(([date, matches]) => {
+    html += `<div class="sched-date-label">${date}</div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-bottom:4px">`;
+    matches.forEach((m, idx) => {
+      const id = `sched_${m.home}_${m.away}`.replace(/\s/g,'_');
+      html += `<div class="schedule-match" id="${id}"
+        onclick="selectScheduleMatch('${m.home}','${m.away}','${m.referee}','${id}')">
+        <div class="sched-time">${m.time}</div>
+        <div class="sched-teams">${m.home} — ${m.away}</div>
+        <div class="sched-ref">👤 ${m.referee}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  grid.innerHTML = html;
+}
+
+function selectScheduleMatch(home, away, referee, selectedId) {
+  // Highlight selected
+  document.querySelectorAll('.schedule-match').forEach(el => el.classList.remove('selected'));
+  document.getElementById(selectedId)?.classList.add('selected');
+
+  // Fill selects
+  const homeEl = document.getElementById('homeTeam');
+  const awayEl = document.getElementById('awayTeam');
+  const refEl  = document.getElementById('referee');
+
+  if (homeEl) homeEl.value = home;
+  if (awayEl) awayEl.value = away;
+  if (refEl)  refEl.value  = referee;
+
+  // Auto-analyze
+  analyzeMatch();
+  // Scroll to results
+  document.getElementById('analysis-result')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ================================================================
 // INIT & NAVIGATION
 // ================================================================
 function showPage(name) {
@@ -1025,8 +783,6 @@ function showPage(name) {
 
   if (name==='teams') renderTeamChart();
   if (name==='referees') renderRefCharts();
-  if (name==='valuebets') renderValueBets();
-  if (name==='calculator') calcBet();
 }
 
 function switchTab(id) {
@@ -1071,10 +827,9 @@ function initSelects() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initSelects();
-  calcBet();
   // Автозапуск анализа
+  renderSchedule();
   analyzeMatch();
-  renderValueBets();
 });
 </script>
 </body>
