@@ -21,14 +21,11 @@ from plotly.subplots import make_subplots
 
 from config.settings import RPL_TEAMS, MODEL_PARAMS, BOOKMAKERS, SEASONS
 from models.prediction_engine import PredictionEngine, PoissonModel
-from analysis.value_finder import ValueBetFinder, BetRecommendation
-from analysis.bet_calculator import BetCalculator
 from scrapers.statistics import (
     RPLStatisticsCollector,
     RefereeStatsCollector,
     TeamStatsCollector,
 )
-from scrapers.bookmakers import OddsAggregator
 from utils.helpers import setup_logging
 
 setup_logging("INFO")
@@ -129,14 +126,6 @@ def load_stats(matches_df):
     return referee_stats, team_stats
 
 
-@st.cache_data(ttl=1800)  # кеш на 30 минут
-def load_bookmaker_odds():
-    """Загрузить коэффициенты букмекеров"""
-    aggregator = OddsAggregator()
-    all_odds = aggregator.get_all_odds()
-    best_odds = aggregator.get_best_odds(all_odds)
-    return best_odds
-
 
 # ==================== ГЛАВНАЯ СТРАНИЦА ====================
 def main():
@@ -162,8 +151,6 @@ def main():
             "Выбрать раздел:",
             [
                 "Анализ матчей",
-                "Ценные ставки",
-                "Калькулятор ставок",
                 "Статистика команд",
                 "Статистика судей",
                 "Настройки модели",
@@ -193,10 +180,6 @@ def main():
     # Маршрутизация
     if page == "Анализ матчей":
         show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule)
-    elif page == "Ценные ставки":
-        show_value_bets(matches_df, referee_stats_df, team_stats_df)
-    elif page == "Калькулятор ставок":
-        show_bet_calculator()
     elif page == "Статистика команд":
         show_team_stats(team_stats_df)
     elif page == "Статистика судей":
@@ -546,336 +529,6 @@ def show_medical_analysis(expected: float, probs: Dict):
                     "Коэф (М)": f"{p['under_odds']:.2f}",
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-
-
-# ==================== ЦЕННЫЕ СТАВКИ ====================
-def show_value_bets(matches_df, referee_stats_df, team_stats_df):
-    st.header("Ценные ставки (Value Bets)")
-
-    st.info(
-        "Ценная ставка — когда вероятность по модели выше, чем подразумевает "
-        "коэффициент букмекера. Value > 5% = хорошая ставка, > 15% = сильная ставка."
-    )
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.subheader("Предстоящие матчи")
-
-    with col2:
-        min_value = st.slider(
-            "Минимальный Value (%)", 0, 30, 5
-        )
-
-    # Демо матчи (в реальной версии будут загружаться из API)
-    demo_matches = [
-        {
-            "home_team": "Зенит",
-            "away_team": "ЦСКА",
-            "referee": "Казарцев С.",
-            "date": "2024-12-15",
-        },
-        {
-            "home_team": "Спартак",
-            "away_team": "Краснодар",
-            "referee": "Лапочкин С.",
-            "date": "2024-12-15",
-        },
-        {
-            "home_team": "Локомотив",
-            "away_team": "Динамо",
-            "referee": "Вилков В.",
-            "date": "2024-12-16",
-        },
-        {
-            "home_team": "Ростов",
-            "away_team": "Рубин",
-            "referee": "Матюнин А.",
-            "date": "2024-12-16",
-        },
-    ]
-
-    with st.spinner("Загрузка коэффициентов и анализ..."):
-        engine = PredictionEngine()
-        finder = ValueBetFinder()
-
-        # Прогнозы
-        predictions = engine.batch_predict(
-            demo_matches, team_stats_df, referee_stats_df, matches_df
-        )
-
-        # Коэффициенты (демо + реальные)
-        aggregator = OddsAggregator()
-        raw_odds = aggregator.get_all_odds()
-        best_odds = aggregator.get_best_odds(raw_odds)
-
-        # Добавить демо коэффициенты для матчей
-        demo_odds = _generate_demo_odds(predictions)
-        for k, v in demo_odds.items():
-            if k not in best_odds:
-                best_odds[k] = v
-
-    # Отображение ценных ставок
-    all_value_bets = []
-    for pred in predictions:
-        match_key = f"{pred.home_team} - {pred.away_team}"
-        bk_data = best_odds.get(match_key, {})
-        bets = finder.analyze_match(pred, bk_data)
-        all_value_bets.extend(bets)
-
-    if all_value_bets:
-        # Фильтр по ценности
-        filtered = [
-            b for b in all_value_bets
-            if b.value * 100 >= min_value
-            and b.recommendation != BetRecommendation.AVOID
-        ]
-
-        if filtered:
-            # Сортировка по ценности
-            filtered.sort(key=lambda x: x.value, reverse=True)
-
-            st.success(f"Найдено {len(filtered)} ценных ставок")
-
-            for bet in filtered:
-                with st.expander(
-                    f"{'🔥' if bet.value >= 0.15 else '✅'} "
-                    f"{bet.match} | {bet.bet_type} | "
-                    f"Value: {bet.value * 100:+.1f}%",
-                    expanded=bet.value >= 0.10,
-                ):
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Букмекер", bet.bookmaker)
-                        st.metric("Коэффициент БК", f"{bet.bookmaker_odds:.2f}")
-                    with col2:
-                        st.metric(
-                            "Вероятность модели",
-                            f"{bet.model_probability * 100:.1f}%"
-                        )
-                        st.metric(
-                            "Подразумевает БК",
-                            f"{bet.bookmaker_implied_prob * 100:.1f}%"
-                        )
-                    with col3:
-                        st.metric("Справедливый коэф", f"{bet.fair_odds:.2f}")
-                        value_delta = f"{bet.value * 100:+.1f}%"
-                        st.metric("Value", value_delta)
-                    with col4:
-                        st.metric(
-                            "Ставка Келли (1/4)",
-                            f"{bet.kelly_fraction * 100:.2f}% банкролла"
-                        )
-                        st.metric(
-                            "Ожидаемый ROI",
-                            f"{bet.expected_roi * 100:.1f}%"
-                        )
-
-                    recommendation_colors = {
-                        BetRecommendation.STRONG_BET: "success",
-                        BetRecommendation.GOOD_BET: "info",
-                        BetRecommendation.NEUTRAL: "warning",
-                    }
-                    getattr(
-                        st,
-                        recommendation_colors.get(bet.recommendation, "info")
-                    )(f"Рекомендация: **{bet.recommendation.value}**")
-        else:
-            st.warning(
-                f"Ценных ставок с Value >= {min_value}% не найдено. "
-                "Попробуйте снизить порог."
-            )
-    else:
-        st.info("Нет данных для анализа. Обновите коэффициенты.")
-
-
-def _generate_demo_odds(predictions) -> Dict:
-    """Генерация демо коэффициентов для тестирования"""
-    demo = {}
-    np.random.seed(42)
-
-    for pred in predictions:
-        match_key = f"{pred.home_team} - {pred.away_team}"
-        # Генерируем "немного ошибочные" коэффициенты букмекера
-        # (иногда они дают Value)
-        yc_line = round(pred.yellow_cards_expected)
-        c_line = round(pred.corners_expected)
-
-        demo[match_key] = {
-            "home_team": pred.home_team,
-            "away_team": pred.away_team,
-            "markets": {
-                "yellow_cards_over": {
-                    "bookmaker": "fonbet",
-                    "odds": round(1 / max(
-                        PoissonModel.probability_over(
-                            pred.yellow_cards_expected, yc_line - 0.5
-                        ) * 0.93, 0.01
-                    ), 2),
-                    "line": yc_line - 0.5,
-                },
-                "yellow_cards_under": {
-                    "bookmaker": "leon",
-                    "odds": round(1 / max(
-                        PoissonModel.probability_under(
-                            pred.yellow_cards_expected, yc_line + 0.5
-                        ) * 0.93, 0.01
-                    ), 2),
-                    "line": yc_line + 0.5,
-                },
-                "corners_over": {
-                    "bookmaker": "fonbet",
-                    "odds": round(1 / max(
-                        PoissonModel.probability_over(
-                            pred.corners_expected, c_line - 0.5
-                        ) * 0.93, 0.01
-                    ), 2),
-                    "line": c_line - 0.5,
-                },
-                "corners_under": {
-                    "bookmaker": "winline",
-                    "odds": round(1 / max(
-                        PoissonModel.probability_under(
-                            pred.corners_expected, c_line + 0.5
-                        ) * 0.93, 0.01
-                    ), 2),
-                    "line": c_line + 0.5,
-                },
-                "penalty_yes": {
-                    "bookmaker": "fonbet",
-                    "odds": round(
-                        1 / max(pred.penalty_probability * np.random.uniform(0.88, 0.95), 0.01),
-                        2
-                    ),
-                    "line": None,
-                },
-                "penalty_no": {
-                    "bookmaker": "leon",
-                    "odds": round(
-                        1 / max(
-                            (1 - pred.penalty_probability) * np.random.uniform(0.90, 0.96),
-                            0.01
-                        ),
-                        2
-                    ),
-                    "line": None,
-                },
-            },
-        }
-
-    return demo
-
-
-# ==================== КАЛЬКУЛЯТОР СТАВОК ====================
-def show_bet_calculator():
-    st.header("Калькулятор ставок")
-
-    col1, col2 = st.columns([1, 1])
-
-    with col1:
-        st.subheader("Параметры ставки")
-
-        bankroll = st.number_input(
-            "Банкролл (₽)", min_value=100.0, max_value=10000000.0,
-            value=10000.0, step=1000.0,
-        )
-        bet_amount = st.number_input(
-            "Сумма ставки (₽)", min_value=10.0, max_value=float(bankroll),
-            value=min(500.0, bankroll * 0.05), step=100.0,
-        )
-        odds = st.number_input(
-            "Коэффициент букмекера", min_value=1.01, max_value=100.0,
-            value=1.85, step=0.05,
-        )
-        model_prob = st.slider(
-            "Вероятность по модели (%)", 1, 99, 55
-        ) / 100
-
-        st.divider()
-        st.subheader("Симуляция серии ставок")
-        n_bets = st.slider("Количество ставок", 10, 500, 100)
-
-    with col2:
-        calculator = BetCalculator()
-        calc = calculator.calculate(bet_amount, odds, model_prob, bankroll)
-
-        st.subheader("Результаты расчета")
-
-        # Ключевые метрики
-        value = (model_prob * odds) - 1.0
-        value_color = "normal" if value >= 0 else "inverse"
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.metric(
-                "Потенциальный выигрыш",
-                f"{calc.potential_win:.0f} ₽",
-                delta=f"+{calc.potential_profit:.0f} ₽"
-            )
-            st.metric(
-                "Вероятность прохода",
-                f"{calc.pass_probability * 100:.1f}%"
-            )
-            st.metric(
-                "Ставка Келли (1/4)",
-                f"{calc.quarter_kelly_bet:.0f} ₽",
-                help="Оптимальный размер ставки по критерию Келли"
-            )
-        with col_b:
-            st.metric(
-                "Ожидаемый ROI",
-                f"{calc.expected_roi:.1f}%",
-                delta=f"{value * 100:+.1f}% Value"
-            )
-            st.metric("Точка безубыточности", f"{calc.breakeven_probability * 100:.1f}%")
-            st.metric("Уровень риска", calc.risk_level)
-
-        # Таблица полных расчетов
-        with st.expander("Полные расчеты"):
-            for key, val in calc.to_dict().items():
-                st.write(f"**{key}:** {val}")
-
-    # Симуляция
-    st.divider()
-    if st.button("Запустить симуляцию Монте-Карло", type="secondary"):
-        with st.spinner("Симуляция..."):
-            sim = calculator.simulate_bankroll(
-                bet_amount, odds, model_prob, n_bets, bankroll
-            )
-
-        st.subheader("Результаты симуляции")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Средний финальный банкролл", f"{sim['mean_final']:.0f} ₽")
-        with col2:
-            st.metric("Медианный банкролл", f"{sim['median_final']:.0f} ₽")
-        with col3:
-            st.metric("Вероятность прибыли", f"{sim['prob_profit'] * 100:.1f}%")
-        with col4:
-            st.metric("Риск разорения", f"{sim['prob_ruin'] * 100:.1f}%")
-
-        # Прогрессбары
-        st.progress(sim['prob_profit'], text=f"Вероятность прибыли: {sim['prob_profit'] * 100:.1f}%")
-
-        # Диапазон результатов
-        fig = go.Figure()
-        fig.add_trace(go.Bar(
-            x=["P10 (пессимист)", "Медиана", "Среднее", "P90 (оптимист)"],
-            y=[sim['p10_final'], sim['median_final'], sim['mean_final'], sim['p90_final']],
-            marker_color=["#e17055", "#fdcb6e", "#0984e3", "#00b894"],
-            text=[f"{v:.0f} ₽" for v in [
-                sim['p10_final'], sim['median_final'],
-                sim['mean_final'], sim['p90_final']
-            ]],
-            textposition="outside",
-        ))
-        fig.add_hline(y=bankroll, line_dash="dash", line_color="gray",
-                      annotation_text="Начальный банкролл")
-        fig.update_layout(
-            title=f"Диапазон финального банкролла после {n_bets} ставок",
-            yaxis_title="Банкролл (₽)",
-            height=400,
-        )
-        st.plotly_chart(fig, use_container_width=True)
 
 
 # ==================== СТАТИСТИКА КОМАНД ====================
