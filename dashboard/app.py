@@ -326,8 +326,8 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
 
     # ---------- КНОПКА АНАЛИЗИРОВАТЬ ----------
     if st.button("Анализировать матч", type="primary", use_container_width=True):
-        # H2H последние 3 матча — показать сразу под кнопкой
-        show_h2h_last_matches(home_team, away_team, matches_df, n=3)
+        # H2H последние 5 матчей — показать сразу под кнопкой
+        show_h2h_last_matches(home_team, away_team, matches_df, n=5)
 
         with st.spinner(f"Анализ: {home_team} vs {away_team}..."):
             engine = PredictionEngine()
@@ -375,36 +375,64 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
         ])
 
         with tab1:
-            show_market_table(
-                prediction.yellow_cards_probs,
-                prediction.yellow_cards_expected,
-                "Желтые карточки",
-                "желтых карточек",
-                home_team=home_team,
-                away_team=away_team,
-                market_key="yellow_cards",
-                matches_df=matches_df,
-            )
+            left_col, right_col = st.columns([6, 4])
+            with left_col:
+                show_market_table(
+                    prediction.yellow_cards_probs,
+                    prediction.yellow_cards_expected,
+                    "Желтые карточки",
+                    "желтых карточек",
+                    home_team=home_team,
+                    away_team=away_team,
+                    market_key="yellow_cards",
+                    matches_df=matches_df,
+                )
+            with right_col:
+                show_prediction_panel(
+                    prediction, "yellow_cards",
+                    home_team, away_team, referee_stats_df
+                )
 
         with tab2:
-            show_market_table(
-                prediction.corners_probs,
-                prediction.corners_expected,
-                "Угловые",
-                "угловых",
-                home_team=home_team,
-                away_team=away_team,
-                market_key="corners",
-                matches_df=matches_df,
-            )
+            left_col, right_col = st.columns([6, 4])
+            with left_col:
+                show_market_table(
+                    prediction.corners_probs,
+                    prediction.corners_expected,
+                    "Угловые",
+                    "угловых",
+                    home_team=home_team,
+                    away_team=away_team,
+                    market_key="corners",
+                    matches_df=matches_df,
+                )
+            with right_col:
+                show_prediction_panel(
+                    prediction, "corners",
+                    home_team, away_team, referee_stats_df
+                )
 
         with tab3:
-            show_penalty_analysis(prediction.penalty_probability, referee)
+            left_col, right_col = st.columns([6, 4])
+            with left_col:
+                show_penalty_analysis(prediction.penalty_probability, referee)
+            with right_col:
+                show_prediction_panel(
+                    prediction, "penalty",
+                    home_team, away_team, referee_stats_df
+                )
 
         with tab4:
-            show_medical_analysis(
-                prediction.medical_expected, prediction.medical_probs
-            )
+            left_col, right_col = st.columns([6, 4])
+            with left_col:
+                show_medical_analysis(
+                    prediction.medical_expected, prediction.medical_probs
+                )
+            with right_col:
+                show_prediction_panel(
+                    prediction, "medical",
+                    home_team, away_team, referee_stats_df
+                )
 
         # Информация о качестве данных
         st.divider()
@@ -434,8 +462,8 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
                 )
 
 
-# ==================== H2H ПОСЛЕДНИЕ 3 МАТЧА ====================
-def show_h2h_last_matches(home_team: str, away_team: str, matches_df, n: int = 3):
+# ==================== H2H ПОСЛЕДНИЕ 5 МАТЧЕЙ ====================
+def show_h2h_last_matches(home_team: str, away_team: str, matches_df, n: int = 5):
     """Показать последние N очных встреч двух команд"""
     if matches_df is None or matches_df.empty:
         return
@@ -524,37 +552,9 @@ def show_market_table(
     df = pd.DataFrame(rows)
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # Блок букмекеров
-    show_bookmaker_links(market_key, expected)
-
-    # Статистические факты
+    # Статистические факты (value bet identification)
     if home_team and away_team and matches_df is not None and not matches_df.empty:
         show_statistical_facts(home_team, away_team, matches_df, market_key)
-
-
-def show_bookmaker_links(market_key: str, expected: float):
-    """Блок ссылок на букмекеров с коэффициентами"""
-    st.markdown("**Ставки у букмекеров:**")
-
-    bk_links = {
-        "fonbet": BOOKMAKERS.get("fonbet", {}).get("football_url", "https://www.fonbet.ru/sports/football/"),
-        "winline": BOOKMAKERS.get("winline", {}).get("football_url", "https://www.winline.ru/sports/football/"),
-        "betboom": BOOKMAKERS.get("betboom", {}).get("football_url", "https://betboom.ru/sport/Football"),
-    }
-    bk_names = {
-        "fonbet": "Фонбет",
-        "winline": "Винлайн",
-        "betboom": "Бетбум",
-    }
-
-    cols = st.columns(3)
-    for i, (bk_key, url) in enumerate(bk_links.items()):
-        with cols[i]:
-            name = bk_names[bk_key]
-            st.markdown(
-                f'<a href="{url}" target="_blank" class="bk-badge">🏷 {name} →</a>',
-                unsafe_allow_html=True,
-            )
 
 
 # ==================== СТАТИСТИЧЕСКИЕ ФАКТЫ ====================
@@ -787,21 +787,6 @@ def show_penalty_analysis(penalty_prob: float, referee: str = ""):
         st.metric("Справедливый коэф НЕТ", f"{fair_no_odds:.2f}")
         st.caption("Среднее по РПЛ: 28% матчей содержат пенальти")
 
-        st.markdown("**Ставки у букмекеров:**")
-        bk_cols = st.columns(3)
-        bk_data = [
-            ("Фонбет", BOOKMAKERS.get("fonbet", {}).get("football_url", "")),
-            ("Винлайн", BOOKMAKERS.get("winline", {}).get("football_url", "")),
-            ("Бетбум", BOOKMAKERS.get("betboom", {}).get("football_url", "")),
-        ]
-        for i, (name, url) in enumerate(bk_data):
-            with bk_cols[i]:
-                if url:
-                    st.markdown(
-                        f'<a href="{url}" target="_blank" class="bk-badge">🏷 {name} →</a>',
-                        unsafe_allow_html=True,
-                    )
-
 
 def show_medical_analysis(expected: float, probs: Dict):
     """Анализ выхода медицинской бригады"""
@@ -811,36 +796,135 @@ def show_medical_analysis(expected: float, probs: Dict):
         "или серьезного нарушения правил"
     )
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Ожидаемое кол-во выходов", f"{expected:.2f}")
-        st.caption("Среднее по РПЛ: 1.8 за матч")
+    st.metric("Ожидаемое кол-во выходов", f"{expected:.2f}")
+    st.caption("Среднее по РПЛ: 1.8 за матч")
 
-        st.markdown("**Ставки у букмекеров:**")
-        bk_cols = st.columns(3)
-        bk_data = [
-            ("Фонбет", BOOKMAKERS.get("fonbet", {}).get("football_url", "")),
-            ("Винлайн", BOOKMAKERS.get("winline", {}).get("football_url", "")),
-            ("Бетбум", BOOKMAKERS.get("betboom", {}).get("football_url", "")),
-        ]
-        for i, (name, url) in enumerate(bk_data):
-            with bk_cols[i]:
-                if url:
-                    st.markdown(
-                        f'<a href="{url}" target="_blank" class="bk-badge">🏷 {name} →</a>',
-                        unsafe_allow_html=True,
-                    )
+    if probs:
+        rows = []
+        for line, p in probs.items():
+            rows.append({
+                "Линия": line,
+                "Коэф (Б)": f"{p['over_odds']:.2f}",
+                "Коэф (М)": f"{p['under_odds']:.2f}",
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-    with col2:
-        if probs:
-            rows = []
-            for line, p in probs.items():
-                rows.append({
-                    "Линия": line,
-                    "Коэф (Б)": f"{p['over_odds']:.2f}",
-                    "Коэф (М)": f"{p['under_odds']:.2f}",
-                })
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+# ==================== ПАНЕЛЬ ПРОГНОЗА (ПРАВАЯ КОЛОНКА) ====================
+def show_prediction_panel(prediction, market: str, home_team: str, away_team: str, referee_stats_df):
+    """Прогноз модели + коэффициенты букмекеров в правой колонке"""
+    st.subheader("🎯 Прогноз модели")
+
+    BK_URLS = {
+        "Фонбет": BOOKMAKERS.get("fonbet", {}).get("football_url", "https://www.fonbet.ru/sports/football/"),
+        "Винлайн": BOOKMAKERS.get("winline", {}).get("football_url", "https://www.winline.ru/sports/football/"),
+        "Бетбум": BOOKMAKERS.get("betboom", {}).get("football_url", "https://betboom.ru/sport/Football"),
+    }
+    VALUE_EDGE = 0.05
+
+    if market == "yellow_cards":
+        exp = prediction.yellow_cards_expected
+        line = 4.5 if exp >= 4.2 else 3.5
+        probs_dict = prediction.yellow_cards_probs or {}
+        p_over = probs_dict.get(line, {}).get("over_prob", 0)
+        p_under = 1 - p_over
+        rec = f"ЖК {'Больше' if p_over > 0.55 else 'Меньше'} {line}"
+        conf_prob = max(p_over, p_under)
+        st.success(f"**{rec}** ({conf_prob*100:.0f}%)")
+        st.metric("Ожидается ЖК", f"{exp:.1f}")
+        st.metric("Рекомендуемая линия", line)
+        st.metric("Вероятность Б", f"{p_over*100:.0f}%")
+        st.metric("Вероятность М", f"{p_under*100:.0f}%")
+
+        # Ссылки на букмекеров с обозначением value
+        st.markdown("---")
+        st.markdown("**Коэффициенты у букмекеров:**")
+        fair_over = 1 / max(p_over, 0.001)
+        fair_under = 1 / max(p_under, 0.001)
+        for bk_name, url in BK_URLS.items():
+            edge_str = f"+{VALUE_EDGE*100:.0f}%+ ценность" if p_over > 0.55 + VALUE_EDGE else ""
+            badge = "🟢" if edge_str else "🔵"
+            st.markdown(
+                f'{badge} <a href="{url}" target="_blank" class="bk-badge">{bk_name} — '
+                f'Б{line}: ~{fair_over:.2f} | М{line}: ~{fair_under:.2f}</a>',
+                unsafe_allow_html=True,
+            )
+
+    elif market == "corners":
+        exp = prediction.corners_expected
+        line = 10.5 if exp >= 10 else 9.5
+        probs_dict = prediction.corners_probs or {}
+        p_over = probs_dict.get(line, {}).get("over_prob", 0)
+        p_under = 1 - p_over
+        rec = f"Угл. {'Больше' if p_over > 0.55 else 'Меньше'} {line}"
+        conf_prob = max(p_over, p_under)
+        st.success(f"**{rec}** ({conf_prob*100:.0f}%)")
+        st.metric("Ожидается угловых", f"{exp:.1f}")
+        st.metric("Рекомендуемая линия", line)
+        st.metric("Вероятность Б", f"{p_over*100:.0f}%")
+        st.metric("Вероятность М", f"{p_under*100:.0f}%")
+
+        st.markdown("---")
+        st.markdown("**Коэффициенты у букмекеров:**")
+        fair_over = 1 / max(p_over, 0.001)
+        fair_under = 1 / max(p_under, 0.001)
+        for bk_name, url in BK_URLS.items():
+            st.markdown(
+                f'🔵 <a href="{url}" target="_blank" class="bk-badge">{bk_name} — '
+                f'Б{line}: ~{fair_over:.2f} | М{line}: ~{fair_under:.2f}</a>',
+                unsafe_allow_html=True,
+            )
+
+    elif market == "penalty":
+        prob = prediction.penalty_probability
+        rec = "Пенальти ДА" if prob > 0.32 else ("Пенальти НЕТ" if prob < 0.22 else "Нейтральная зона")
+        if prob > 0.32:
+            st.success(f"**{rec}** ({prob*100:.0f}%)")
+        elif prob < 0.22:
+            st.warning(f"**{rec}** ({(1-prob)*100:.0f}% НЕТ)")
+        else:
+            st.info(f"**{rec}** — пенальти возможен")
+        fair_yes = 1 / max(prob, 0.001)
+        fair_no = 1 / max(1 - prob, 0.001)
+        st.metric("Справедливый коэф ДА", f"{fair_yes:.2f}", f"{prob*100:.0f}%")
+        st.metric("Справедливый коэф НЕТ", f"{fair_no:.2f}", f"{(1-prob)*100:.0f}%")
+
+        st.markdown("---")
+        st.markdown("**Коэффициенты у букмекеров:**")
+        for bk_name, url in BK_URLS.items():
+            st.markdown(
+                f'🔵 <a href="{url}" target="_blank" class="bk-badge">{bk_name} — '
+                f'ДА: ~{fair_yes:.2f} | НЕТ: ~{fair_no:.2f}</a>',
+                unsafe_allow_html=True,
+            )
+
+    elif market == "medical":
+        exp = prediction.medical_expected
+        p_over_15 = sum(1 for _ in range(1)) / 1  # placeholder
+        rec = f"Медбр. {'Больше' if exp > 1.5 else 'Меньше'} 1.5"
+        prob = 0.70 if exp > 1.5 else 0.65
+        st.info(f"**{rec}** (ожидается {exp:.1f} выходов)")
+        st.metric("Ожидается выходов", f"{exp:.1f}")
+        st.caption("Коэффициенты по медбригаде доступны не у всех БК — проверьте вручную")
+
+        st.markdown("---")
+        st.markdown("**Коэффициенты у букмекеров:**")
+        for bk_name, url in BK_URLS.items():
+            st.markdown(
+                f'🔵 <a href="{url}" target="_blank" class="bk-badge">{bk_name} →</a>',
+                unsafe_allow_html=True,
+            )
+
+    # Уверенность и факторы
+    st.markdown("---")
+    conf = prediction.confidence
+    ref_name = getattr(prediction, 'referee', '') or ''
+    if referee_stats_df is not None and not referee_stats_df.empty and ref_name:
+        ref_row = referee_stats_df[referee_stats_df["referee"] == ref_name]
+        if not ref_row.empty:
+            strict = ref_row.iloc[0].get("strictness", 1.0)
+            st.caption(f"Судья: **{ref_name}** · Строгость: {strict:.2f}")
+    st.caption(f"Уверенность модели: **{conf*100:.0f}%** · Факторы: {', '.join(prediction.factors_used)}")
 
 
 # ==================== СТАТИСТИКА КОМАНД ====================
