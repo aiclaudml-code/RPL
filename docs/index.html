@@ -245,7 +245,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- Ближайший тур -->
     <div class="card" id="schedule-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-weight:700;font-size:15px">📅 Тур 22 · 14–16 марта 2026</div>
+        <div style="font-weight:700;font-size:15px" id="schedule-title">📅 Тур 22 · 14–16 марта 2026</div>
         <div style="font-size:12px;color:var(--muted)">Нажмите на матч для быстрого анализа</div>
       </div>
       <div id="schedule-grid"></div>
@@ -1388,6 +1388,11 @@ function initSelects() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Dynamic schedule title
+  const titleEl = document.getElementById('schedule-title');
+  if (titleEl) {
+    titleEl.textContent = `📅 Тур ${SCHEDULE_ROUND} · ${SCHEDULE_DATES}`;
+  }
   initSelects();
   renderSchedule();
   analyzeMatch();
