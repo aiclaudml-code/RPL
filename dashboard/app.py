@@ -17,7 +17,6 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots
 
 from config.settings import RPL_TEAMS, MODEL_PARAMS, BOOKMAKERS, SEASONS
 from models.prediction_engine import PredictionEngine, PoissonModel
@@ -30,6 +29,9 @@ from utils.helpers import setup_logging
 
 setup_logging("INFO")
 logger = logging.getLogger(__name__)
+
+# Основные букмекеры для отображения
+PRIMARY_BOOKMAKERS = ["fonbet", "winline", "betboom"]
 
 # ==================== НАСТРОЙКИ СТРАНИЦЫ ====================
 st.set_page_config(
@@ -90,6 +92,32 @@ st.markdown(
         padding: 2px 8px;
         border-radius: 4px;
     }
+    .bk-badge {
+        display: inline-block;
+        background: #2d3436;
+        color: white;
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        margin: 2px 4px;
+        text-decoration: none;
+    }
+    .fact-block {
+        background: #f8f9fa;
+        border-left: 4px solid #0984e3;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0 6px 6px 0;
+        font-size: 0.92rem;
+    }
+    .fact-prognoz {
+        background: #e8f5e9;
+        border-left: 4px solid #00b894;
+        padding: 0.75rem 1rem;
+        margin: 0.5rem 0;
+        border-radius: 0 6px 6px 0;
+        font-weight: bold;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -126,7 +154,6 @@ def load_stats(matches_df):
     return referee_stats, team_stats
 
 
-
 # ==================== ГЛАВНАЯ СТРАНИЦА ====================
 def main():
     # Заголовок
@@ -160,7 +187,18 @@ def main():
         st.divider()
         st.subheader("Обновление данных")
 
-        if st.button("Обновить коэффициенты", type="primary"):
+        if st.button("Обновить расписание с premierliga.ru", type="primary"):
+            try:
+                from scrapers.premierliga import update_schedule
+                with st.spinner("Загрузка расписания с premierliga.ru..."):
+                    update_schedule()
+                st.cache_data.clear()
+                st.success("Расписание обновлено!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Ошибка: {e}")
+
+        if st.button("Обновить коэффициенты"):
             st.cache_data.clear()
             st.rerun()
 
@@ -286,7 +324,11 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
         )
         referee = st.selectbox("Судья (необязательно)", referees_list, index=default_ref_idx)
 
+    # ---------- КНОПКА АНАЛИЗИРОВАТЬ ----------
     if st.button("Анализировать матч", type="primary", use_container_width=True):
+        # H2H последние 3 матча — показать сразу под кнопкой
+        show_h2h_last_matches(home_team, away_team, matches_df, n=3)
+
         with st.spinner(f"Анализ: {home_team} vs {away_team}..."):
             engine = PredictionEngine()
             prediction = engine.predict_match(
@@ -338,6 +380,10 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
                 prediction.yellow_cards_expected,
                 "Желтые карточки",
                 "желтых карточек",
+                home_team=home_team,
+                away_team=away_team,
+                market_key="yellow_cards",
+                matches_df=matches_df,
             )
 
         with tab2:
@@ -346,6 +392,10 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
                 prediction.corners_expected,
                 "Угловые",
                 "угловых",
+                home_team=home_team,
+                away_team=away_team,
+                market_key="corners",
+                matches_df=matches_df,
             )
 
         with tab3:
@@ -360,16 +410,12 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
         st.divider()
         col1, col2 = st.columns(2)
         with col1:
-            quality_color = {
-                "high": "green", "medium": "orange", "low": "red"
-            }
             st.info(
                 f"Качество данных: **{prediction.data_quality.upper()}** | "
                 f"Уверенность: **{prediction.confidence * 100:.0f}%** | "
                 f"Факторы: {', '.join(prediction.factors_used)}"
             )
         with col2:
-            # H2H статистика
             h2h = matches_df[
                 (
                     (matches_df["home_team"] == home_team)
@@ -388,75 +434,316 @@ def show_match_analysis(matches_df, referee_stats_df, team_stats_df, schedule: d
                 )
 
 
-def show_market_table(probs: Dict, expected: float, title: str, unit: str):
-    """Отобразить таблицу вероятностей для рынка"""
+# ==================== H2H ПОСЛЕДНИЕ 3 МАТЧА ====================
+def show_h2h_last_matches(home_team: str, away_team: str, matches_df, n: int = 3):
+    """Показать последние N очных встреч двух команд"""
+    if matches_df is None or matches_df.empty:
+        return
+
+    h2h = matches_df[
+        (
+            (matches_df["home_team"] == home_team)
+            & (matches_df["away_team"] == away_team)
+        )
+        | (
+            (matches_df["home_team"] == away_team)
+            & (matches_df["away_team"] == home_team)
+        )
+    ].copy()
+
+    if h2h.empty:
+        st.info(f"Очных встреч {home_team} — {away_team} в базе не найдено")
+        return
+
+    # Сортировка по дате (новые первыми)
+    if "date" in h2h.columns:
+        try:
+            h2h["date"] = pd.to_datetime(h2h["date"], dayfirst=True, errors="coerce")
+            h2h = h2h.sort_values("date", ascending=False)
+        except Exception:
+            pass
+
+    recent = h2h.head(n)
+
+    with st.container(border=True):
+        st.markdown(f"#### 🤝 Последние {min(n, len(recent))} очных встречи")
+        for _, row in recent.iterrows():
+            home = row.get("home_team", "?")
+            away = row.get("away_team", "?")
+            hg = int(row.get("home_goals", 0)) if pd.notna(row.get("home_goals")) else "?"
+            ag = int(row.get("away_goals", 0)) if pd.notna(row.get("away_goals")) else "?"
+            hyc = int(row.get("home_yellow_cards", 0)) if pd.notna(row.get("home_yellow_cards")) else "?"
+            ayc = int(row.get("away_yellow_cards", 0)) if pd.notna(row.get("away_yellow_cards")) else "?"
+            hc = int(row.get("home_corners", 0)) if pd.notna(row.get("home_corners")) else "?"
+            ac = int(row.get("away_corners", 0)) if pd.notna(row.get("away_corners")) else "?"
+            date_val = row.get("date", "")
+            date_str = (
+                date_val.strftime("%d.%m.%Y")
+                if hasattr(date_val, "strftime")
+                else str(date_val)[:10]
+            )
+            referee_str = row.get("referee", "")
+            ref_info = f" · Судья: {referee_str}" if referee_str else ""
+
+            st.markdown(
+                f"**{date_str}** — **{home} {hg}:{ag} {away}**{ref_info}  \n"
+                f"ЖК: {home} **{hyc}** – {away} **{ayc}** &nbsp;|&nbsp; "
+                f"Угловые: {home} **{hc}** – {away} **{ac}**"
+            )
+        st.divider()
+
+
+# ==================== ТАБЛИЦА РЫНКА ====================
+def show_market_table(
+    probs: Dict,
+    expected: float,
+    title: str,
+    unit: str,
+    home_team: str = "",
+    away_team: str = "",
+    market_key: str = "",
+    matches_df=None,
+):
+    """Отобразить таблицу коэффициентов для рынка (без % вероятностей)"""
     if not probs:
         st.warning("Нет данных для отображения")
         return
 
+    st.subheader(title)
+    st.caption(f"Ожидаемое значение: **{expected:.2f}** {unit}")
+
+    # Таблица: линия + справедливые коэффициенты (без %)
     rows = []
     for line, p in probs.items():
         rows.append({
             "Линия": line,
-            "Больше (%)": f"{p['over'] * 100:.1f}%",
-            "Меньше (%)": f"{p['under'] * 100:.1f}%",
-            "Справедливый коэф (Б)": f"{p['over_odds']:.2f}",
-            "Справедливый коэф (М)": f"{p['under_odds']:.2f}",
+            "Справедливый коэф Б": f"{p['over_odds']:.2f}",
+            "Справедливый коэф М": f"{p['under_odds']:.2f}",
         })
 
     df = pd.DataFrame(rows)
-
-    # Подсветить строку ближайшую к ожиданию
-    st.subheader(f"{title}")
-    st.caption(f"Ожидаемое значение: **{expected:.2f}** {unit}")
     st.dataframe(df, use_container_width=True, hide_index=True)
 
-    # График распределения Пуассона
-    fig = create_poisson_chart(expected, title)
-    st.plotly_chart(fig, use_container_width=True)
+    # Блок букмекеров
+    show_bookmaker_links(market_key, expected)
+
+    # Статистические факты
+    if home_team and away_team and matches_df is not None and not matches_df.empty:
+        show_statistical_facts(home_team, away_team, matches_df, market_key)
 
 
-def create_poisson_chart(lambda_: float, title: str) -> go.Figure:
-    """График распределения Пуассона"""
-    max_k = max(15, int(lambda_ * 3))
-    k_values = list(range(0, max_k + 1))
-    probs = [PoissonModel.probability_exact(lambda_, k) for k in k_values]
+def show_bookmaker_links(market_key: str, expected: float):
+    """Блок ссылок на букмекеров с коэффициентами"""
+    st.markdown("**Ставки у букмекеров:**")
 
-    # Цвет столбцов (ближе к ожиданию - ярче)
-    colors = []
-    for k in k_values:
-        if abs(k - lambda_) < 1:
-            colors.append("#0984e3")
-        elif abs(k - lambda_) < 2:
-            colors.append("#74b9ff")
-        else:
-            colors.append("#b2bec3")
+    bk_links = {
+        "fonbet": BOOKMAKERS.get("fonbet", {}).get("football_url", "https://www.fonbet.ru/sports/football/"),
+        "winline": BOOKMAKERS.get("winline", {}).get("football_url", "https://www.winline.ru/sports/football/"),
+        "betboom": BOOKMAKERS.get("betboom", {}).get("football_url", "https://betboom.ru/sport/Football"),
+    }
+    bk_names = {
+        "fonbet": "Фонбет",
+        "winline": "Винлайн",
+        "betboom": "Бетбум",
+    }
 
-    fig = go.Figure(
-        data=[
-            go.Bar(
-                x=k_values,
-                y=[p * 100 for p in probs],
-                marker_color=colors,
-                text=[f"{p*100:.1f}%" if p > 0.02 else "" for p in probs],
-                textposition="outside",
+    cols = st.columns(3)
+    for i, (bk_key, url) in enumerate(bk_links.items()):
+        with cols[i]:
+            name = bk_names[bk_key]
+            st.markdown(
+                f'<a href="{url}" target="_blank" class="bk-badge">🏷 {name} →</a>',
+                unsafe_allow_html=True,
             )
-        ]
-    )
-    fig.add_vline(
-        x=lambda_,
-        line_dash="dash",
-        line_color="red",
-        annotation_text=f"Среднее: {lambda_:.2f}",
-    )
-    fig.update_layout(
-        title=f"Распределение вероятностей: {title}",
-        xaxis_title="Количество",
-        yaxis_title="Вероятность (%)",
-        height=350,
-        showlegend=False,
-    )
-    return fig
+
+
+# ==================== СТАТИСТИЧЕСКИЕ ФАКТЫ ====================
+def show_statistical_facts(
+    home_team: str,
+    away_team: str,
+    matches_df,
+    market_key: str,
+    n_matches: int = 17,
+    handicaps: Optional[List[float]] = None,
+):
+    """
+    Найти и отобразить статистические факты по паттернам команд.
+    Пример: "Сочи проиграла по ЖК с форой -1.5 в 15 из 17 матчах"
+    """
+    if matches_df is None or matches_df.empty:
+        return
+
+    if market_key == "yellow_cards":
+        home_col = "home_yellow_cards"
+        away_col = "away_yellow_cards"
+        metric_name = "желтым карточкам"
+        if handicaps is None:
+            handicaps = [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5]
+    elif market_key == "corners":
+        home_col = "home_corners"
+        away_col = "away_corners"
+        metric_name = "угловым"
+        if handicaps is None:
+            handicaps = [-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5]
+    else:
+        return
+
+    # Проверим, что нужные колонки существуют
+    required_cols = [home_col, away_col, "home_team", "away_team"]
+    if not all(c in matches_df.columns for c in required_cols):
+        return
+
+    facts = []
+    min_ratio = 0.70  # минимальная доля для отображения факта
+    min_matches = 8   # минимум матчей для надёжности
+
+    for team in [home_team, away_team]:
+        # Матчи команды (как дома и в гостях)
+        team_matches = matches_df[
+            (matches_df["home_team"] == team) | (matches_df["away_team"] == team)
+        ].copy()
+
+        if "date" in team_matches.columns:
+            try:
+                team_matches["date"] = pd.to_datetime(
+                    team_matches["date"], dayfirst=True, errors="coerce"
+                )
+                team_matches = team_matches.sort_values("date", ascending=False)
+            except Exception:
+                pass
+
+        recent = team_matches.head(n_matches)
+        total = len(recent)
+
+        if total < min_matches:
+            continue
+
+        for hcp in handicaps:
+            wins = 0
+            for _, row in recent.iterrows():
+                is_home = row["home_team"] == team
+                if is_home:
+                    team_val = row.get(home_col, 0) or 0
+                    opp_val = row.get(away_col, 0) or 0
+                else:
+                    team_val = row.get(away_col, 0) or 0
+                    opp_val = row.get(home_col, 0) or 0
+
+                # "Победа" команды по рынку с форой: team_val + hcp > opp_val
+                if (team_val + hcp) > opp_val:
+                    wins += 1
+
+            ratio = wins / total
+            if ratio >= min_ratio:
+                hcp_str = f"+{hcp}" if hcp > 0 else str(hcp)
+                action = "победила" if hcp <= 0 else "покрыла форму"
+                facts.append({
+                    "team": team,
+                    "handicap": hcp,
+                    "wins": wins,
+                    "total": total,
+                    "ratio": ratio,
+                    "text": (
+                        f"Команда **{team}** победила по {metric_name} "
+                        f"с форой {hcp_str} в **{wins} из {total}** последних матчах"
+                    ),
+                })
+
+        # Поиск потерь (команда проигрывает по рынку)
+        for hcp in handicaps:
+            losses = 0
+            for _, row in recent.iterrows():
+                is_home = row["home_team"] == team
+                if is_home:
+                    team_val = row.get(home_col, 0) or 0
+                    opp_val = row.get(away_col, 0) or 0
+                else:
+                    team_val = row.get(away_col, 0) or 0
+                    opp_val = row.get(home_col, 0) or 0
+
+                # "Поражение": team_val < opp_val - |hcp|  (т.е. с форой hcp проигрывает)
+                if (team_val - abs(hcp)) < opp_val:
+                    losses += 1
+
+            ratio = losses / total
+            if ratio >= min_ratio and hcp < 0:
+                facts.append({
+                    "team": team,
+                    "handicap": hcp,
+                    "wins": losses,
+                    "total": total,
+                    "ratio": ratio,
+                    "text": (
+                        f"Команда **{team}** проиграла по {metric_name} "
+                        f"с форой {hcp} в **{losses} из {total}** последних матчах"
+                    ),
+                })
+
+    if not facts:
+        return
+
+    # Убрать дубликаты и отсортировать по силе факта
+    seen = set()
+    unique_facts = []
+    for f in sorted(facts, key=lambda x: -x["ratio"]):
+        key = (f["team"], f["handicap"], f["wins"])
+        if key not in seen:
+            seen.add(key)
+            unique_facts.append(f)
+
+    # Найти прогноз (если одна команда имеет преимущество)
+    home_facts = [f for f in unique_facts if f["team"] == home_team]
+    away_facts = [f for f in unique_facts if f["team"] == away_team]
+
+    # Отображение
+    st.markdown("---")
+    st.markdown("#### 📊 Статистические факты")
+
+    displayed = 0
+    for f in unique_facts[:6]:
+        st.markdown(
+            f'<div class="fact-block">{f["text"]}</div>',
+            unsafe_allow_html=True,
+        )
+        displayed += 1
+
+    # Прогноз — если у одной из команд есть устойчивое преимущество
+    if home_facts and away_facts:
+        best_home = max(home_facts, key=lambda x: x["ratio"])
+        best_away = max(away_facts, key=lambda x: x["ratio"])
+
+        if best_home["ratio"] > best_away["ratio"] and best_home["ratio"] >= 0.75:
+            hcp = best_home["handicap"]
+            hcp_str = f"+{hcp}" if hcp > 0 else str(hcp)
+            prognoz = f"Прогноз: фора {home_team} {hcp_str}"
+            st.markdown(
+                f'<div class="fact-prognoz">🎯 {prognoz}</div>',
+                unsafe_allow_html=True,
+            )
+        elif best_away["ratio"] > best_home["ratio"] and best_away["ratio"] >= 0.75:
+            hcp = best_away["handicap"]
+            hcp_str = f"+{hcp}" if hcp > 0 else str(hcp)
+            prognoz = f"Прогноз: фора {away_team} {hcp_str}"
+            st.markdown(
+                f'<div class="fact-prognoz">🎯 {prognoz}</div>',
+                unsafe_allow_html=True,
+            )
+    elif home_facts:
+        best = max(home_facts, key=lambda x: x["ratio"])
+        if best["ratio"] >= 0.78:
+            hcp_str = f"+{best['handicap']}" if best["handicap"] > 0 else str(best["handicap"])
+            st.markdown(
+                f'<div class="fact-prognoz">🎯 Прогноз: фора {home_team} {hcp_str}</div>',
+                unsafe_allow_html=True,
+            )
+    elif away_facts:
+        best = max(away_facts, key=lambda x: x["ratio"])
+        if best["ratio"] >= 0.78:
+            hcp_str = f"+{best['handicap']}" if best["handicap"] > 0 else str(best["handicap"])
+            st.markdown(
+                f'<div class="fact-prognoz">🎯 Прогноз: фора {away_team} {hcp_str}</div>',
+                unsafe_allow_html=True,
+            )
 
 
 def show_penalty_analysis(penalty_prob: float, referee: str = ""):
@@ -465,7 +752,6 @@ def show_penalty_analysis(penalty_prob: float, referee: str = ""):
 
     col1, col2 = st.columns(2)
     with col1:
-        # Gauge chart
         fig = go.Figure(
             go.Indicator(
                 mode="gauge+number",
@@ -485,7 +771,7 @@ def show_penalty_analysis(penalty_prob: float, referee: str = ""):
                     "threshold": {
                         "line": {"color": "red", "width": 4},
                         "thickness": 0.75,
-                        "value": 28,  # средний по РПЛ
+                        "value": 28,
                     },
                 },
             )
@@ -497,15 +783,28 @@ def show_penalty_analysis(penalty_prob: float, referee: str = ""):
         fair_yes_odds = 1.0 / max(penalty_prob, 0.001)
         fair_no_odds = 1.0 / max(1 - penalty_prob, 0.001)
 
-        st.metric("Вероятность ДА", f"{penalty_prob * 100:.1f}%")
-        st.metric("Вероятность НЕТ", f"{(1-penalty_prob) * 100:.1f}%")
         st.metric("Справедливый коэф ДА", f"{fair_yes_odds:.2f}")
         st.metric("Справедливый коэф НЕТ", f"{fair_no_odds:.2f}")
         st.caption("Среднее по РПЛ: 28% матчей содержат пенальти")
 
+        st.markdown("**Ставки у букмекеров:**")
+        bk_cols = st.columns(3)
+        bk_data = [
+            ("Фонбет", BOOKMAKERS.get("fonbet", {}).get("football_url", "")),
+            ("Винлайн", BOOKMAKERS.get("winline", {}).get("football_url", "")),
+            ("Бетбум", BOOKMAKERS.get("betboom", {}).get("football_url", "")),
+        ]
+        for i, (name, url) in enumerate(bk_data):
+            with bk_cols[i]:
+                if url:
+                    st.markdown(
+                        f'<a href="{url}" target="_blank" class="bk-badge">🏷 {name} →</a>',
+                        unsafe_allow_html=True,
+                    )
+
 
 def show_medical_analysis(expected: float, probs: Dict):
-    """Анализ выхода медбригады"""
+    """Анализ выхода медицинской бригады"""
     st.subheader("Выход медицинской бригады")
     st.caption(
         "Выход медбригады — замена игрока из-за травмы "
@@ -517,14 +816,27 @@ def show_medical_analysis(expected: float, probs: Dict):
         st.metric("Ожидаемое кол-во выходов", f"{expected:.2f}")
         st.caption("Среднее по РПЛ: 1.8 за матч")
 
+        st.markdown("**Ставки у букмекеров:**")
+        bk_cols = st.columns(3)
+        bk_data = [
+            ("Фонбет", BOOKMAKERS.get("fonbet", {}).get("football_url", "")),
+            ("Винлайн", BOOKMAKERS.get("winline", {}).get("football_url", "")),
+            ("Бетбум", BOOKMAKERS.get("betboom", {}).get("football_url", "")),
+        ]
+        for i, (name, url) in enumerate(bk_data):
+            with bk_cols[i]:
+                if url:
+                    st.markdown(
+                        f'<a href="{url}" target="_blank" class="bk-badge">🏷 {name} →</a>',
+                        unsafe_allow_html=True,
+                    )
+
     with col2:
         if probs:
             rows = []
             for line, p in probs.items():
                 rows.append({
                     "Линия": line,
-                    "Больше (%)": f"{p['over'] * 100:.1f}%",
-                    "Меньше (%)": f"{p['under'] * 100:.1f}%",
                     "Коэф (Б)": f"{p['over_odds']:.2f}",
                     "Коэф (М)": f"{p['under_odds']:.2f}",
                 })
@@ -539,7 +851,6 @@ def show_team_stats(team_stats_df):
         st.warning("Данные о командах недоступны")
         return
 
-    # Фильтры
     col1, col2 = st.columns(2)
     with col1:
         market = st.selectbox(
@@ -551,7 +862,6 @@ def show_team_stats(team_stats_df):
 
     ascending = sort_by == "По возрастанию"
 
-    # Выбор метрики
     metric_map = {
         "Желтые карточки": ("avg_yellow_cards", "Среднее ЖК за матч"),
         "Угловые": ("avg_corners", "Среднее угловых за матч"),
@@ -567,7 +877,6 @@ def show_team_stats(team_stats_df):
 
     sorted_df = team_stats_df.sort_values(metric_col, ascending=ascending)
 
-    # Горизонтальный бар чарт
     fig = px.bar(
         sorted_df,
         x=metric_col,
@@ -581,7 +890,6 @@ def show_team_stats(team_stats_df):
     fig.update_layout(height=600, showlegend=False)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Таблица
     with st.expander("Полная таблица статистики"):
         display_cols = [
             "team", "matches_analyzed", "avg_yellow_cards",
@@ -605,7 +913,6 @@ def show_referee_stats(referee_stats_df):
         st.warning("Данные о судьях недоступны")
         return
 
-    # Источник данных
     source = "synthetic"
     if "source" in referee_stats_df.columns:
         sources = referee_stats_df["source"].dropna().unique()
@@ -624,7 +931,6 @@ def show_referee_stats(referee_stats_df):
             "Строгость > 1.0 = судья строже среднего, < 1.0 = мягче среднего."
         )
 
-    # Таблица судей
     col1, col2 = st.columns([2, 1])
 
     with col1:
