@@ -166,6 +166,43 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 /* FOOTER */
 .footer{text-align:center;padding:32px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:32px}
+
+/* ANALYSIS 2-COLUMN LAYOUT */
+.analysis-cols{display:grid;grid-template-columns:58% 42%;gap:16px;align-items:start}
+.analysis-left{}
+.analysis-right{}
+@media(max-width:900px){.analysis-cols{grid-template-columns:1fr}}
+
+/* PREDICTION PANEL */
+.pred-panel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.pred-recommendation{background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.35);
+  border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:14px;font-weight:700;color:var(--green)}
+.pred-warning{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
+  border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--yellow)}
+.pred-row{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 10px;border-radius:6px;font-size:13px;margin-bottom:4px}
+.pred-row:nth-child(odd){background:rgba(255,255,255,.03)}
+.pred-label{color:var(--muted)}
+.pred-val{font-weight:700;color:#fff}
+
+/* BOOKMAKER ODDS COMPARISON */
+.bk-compare-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.bk-compare-table th{background:var(--surface);color:var(--muted);padding:7px 8px;text-align:center;font-weight:500;font-size:11px}
+.bk-compare-table td{padding:7px 8px;border-top:1px solid var(--border);text-align:center;vertical-align:middle}
+.bk-compare-table td:first-child{text-align:left;font-weight:600}
+.bk-odds-val{font-weight:700;font-size:13px}
+.bk-value{color:var(--green);font-weight:700}
+.bk-neutral{color:var(--text)}
+.bk-link{color:var(--accent2);text-decoration:none;font-size:11px}
+.bk-link:hover{text-decoration:underline}
+
+/* VALUE BETS in facts */
+.value-bet-block{background:rgba(34,197,94,.08);border-left:3px solid var(--green);
+  padding:10px 14px;margin:6px 0;border-radius:0 6px 6px 0;font-size:13px;line-height:1.5}
+.value-bet-title{font-size:14px;font-weight:700;color:var(--green);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.edge-badge{display:inline-block;background:rgba(34,197,94,.2);color:var(--green);
+  padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;margin-left:6px}
+.edge-badge.neg{background:rgba(239,68,68,.15);color:var(--red)}
 </style>
 </head>
 <body>
@@ -251,44 +288,78 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
         <!-- TAB: ЖК -->
         <div id="tab-yc" class="tab-content active">
-          <div class="card" style="margin-bottom:0">
-            <div class="card-title">📊 Коэффициенты по линиям</div>
-            <div class="table-wrap"><table id="yc-table"></table></div>
-            <div id="yc-bk" class="bk-links"></div>
-            <div id="yc-facts"></div>
+          <div class="analysis-cols">
+            <div class="analysis-left">
+              <div class="card" style="margin-bottom:0">
+                <div class="card-title">📊 Коэффициенты по линиям</div>
+                <div class="table-wrap"><table id="yc-table"></table></div>
+                <div id="yc-facts" style="margin-top:12px"></div>
+              </div>
+            </div>
+            <div class="analysis-right">
+              <div class="card pred-panel" style="margin-bottom:0">
+                <div class="card-title">🎯 Прогноз модели</div>
+                <div id="yc-prediction"></div>
+                <div id="yc-bk-comparison"></div>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- TAB: Угловые -->
         <div id="tab-corners" class="tab-content">
-          <div class="card" style="margin-bottom:0">
-            <div class="card-title">📊 Коэффициенты по линиям</div>
-            <div class="table-wrap"><table id="corners-table"></table></div>
-            <div id="corners-bk" class="bk-links"></div>
-            <div id="corners-facts"></div>
+          <div class="analysis-cols">
+            <div class="analysis-left">
+              <div class="card" style="margin-bottom:0">
+                <div class="card-title">📊 Коэффициенты по линиям</div>
+                <div class="table-wrap"><table id="corners-table"></table></div>
+                <div id="corners-facts" style="margin-top:12px"></div>
+              </div>
+            </div>
+            <div class="analysis-right">
+              <div class="card pred-panel" style="margin-bottom:0">
+                <div class="card-title">🎯 Прогноз модели</div>
+                <div id="corners-prediction"></div>
+                <div id="corners-bk-comparison"></div>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- TAB: Пенальти -->
         <div id="tab-penalty" class="tab-content">
-          <div class="grid-2">
-            <div class="card" style="margin-bottom:0">
-              <div id="penalty-gauge" style="height:280px"></div>
+          <div class="analysis-cols">
+            <div class="analysis-left">
+              <div class="card" style="margin-bottom:0">
+                <div id="penalty-gauge" style="height:280px"></div>
+              </div>
             </div>
-            <div class="card" style="margin-bottom:0">
-              <div class="card-title">⚖️ Справедливые коэффициенты</div>
-              <div id="penalty-details"></div>
-              <div class="bk-links" id="penalty-bk"></div>
+            <div class="analysis-right">
+              <div class="card pred-panel" style="margin-bottom:0">
+                <div class="card-title">🎯 Прогноз · Пенальти</div>
+                <div id="penalty-details"></div>
+                <div id="penalty-bk-comparison" style="margin-top:12px"></div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- TAB: Медбригада -->
         <div id="tab-medical" class="tab-content">
-          <div class="card" style="margin-bottom:0">
-            <div class="card-title">📊 Коэффициенты по линиям</div>
-            <div class="table-wrap"><table id="medical-table"></table></div>
-            <div id="medical-bk" class="bk-links"></div>
+          <div class="analysis-cols">
+            <div class="analysis-left">
+              <div class="card" style="margin-bottom:0">
+                <div class="card-title">📊 Коэффициенты по линиям</div>
+                <div class="table-wrap"><table id="medical-table"></table></div>
+              </div>
+            </div>
+            <div class="analysis-right">
+              <div class="card pred-panel" style="margin-bottom:0">
+                <div class="card-title">🎯 Прогноз модели</div>
+                <div id="medical-prediction"></div>
+                <div id="medical-bk-comparison"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -414,34 +485,112 @@ const UPCOMING_MATCHES = [
   {date:"16.03",time:"13:00",home:"Динамо",         away:"Крылья Советов",  referee:"Вилков В."},
 ];
 
-// H2H история последних встреч (реальные данные РПЛ 2022–2025)
+// H2H история последних встреч (данные РПЛ 2022–2025, 5 матчей)
 const H2H_HISTORY = {
   "Сочи|Краснодар": [
     {date:"12.05.2025",hg:0,ag:2,hyc:3,ayc:1,hc:4,ac:6,ref:"Лапочкин С."},
     {date:"27.10.2024",hg:1,ag:1,hyc:2,ayc:2,hc:5,ac:7,ref:"Матюнин А."},
     {date:"17.03.2024",hg:0,ag:3,hyc:4,ayc:1,hc:3,ac:8,ref:"Левников С."},
+    {date:"21.10.2023",hg:1,ag:2,hyc:3,ayc:2,hc:4,ac:5,ref:"Безбородов А."},
+    {date:"18.03.2023",hg:0,ag:1,hyc:2,ayc:1,hc:3,ac:6,ref:"Карасев С."},
   ],
   "Зенит|Спартак": [
     {date:"05.05.2025",hg:2,ag:0,hyc:2,ayc:3,hc:7,ac:4,ref:"Карасев С."},
     {date:"10.11.2024",hg:1,ag:1,hyc:1,ayc:2,hc:6,ac:5,ref:"Матюнин А."},
     {date:"30.03.2024",hg:3,ag:1,hyc:2,ayc:3,hc:8,ac:3,ref:"Левников С."},
+    {date:"12.11.2023",hg:1,ag:0,hyc:3,ayc:2,hc:7,ac:4,ref:"Безбородов А."},
+    {date:"25.03.2023",hg:2,ag:2,hyc:2,ayc:2,hc:6,ac:5,ref:"Чистяков Е."},
+  ],
+  "ЦСКА|Пари НН": [
+    {date:"19.05.2025",hg:3,ag:0,hyc:1,ayc:3,hc:7,ac:2,ref:"Матюнин А."},
+    {date:"24.11.2024",hg:2,ag:0,hyc:2,ayc:2,hc:6,ac:3,ref:"Вилков В."},
+    {date:"14.04.2024",hg:1,ag:1,hyc:2,ayc:3,hc:5,ac:4,ref:"Карасев С."},
+    {date:"29.10.2023",hg:2,ag:1,hyc:3,ayc:2,hc:6,ac:3,ref:"Москалев А."},
+    {date:"02.04.2023",hg:1,ag:0,hyc:2,ayc:1,hc:5,ac:2,ref:"Левников С."},
   ],
   "ЦСКА|Краснодар": [
     {date:"18.05.2025",hg:1,ag:2,hyc:2,ayc:2,hc:5,ac:6,ref:"Безбородов А."},
     {date:"03.11.2024",hg:2,ag:1,hyc:3,ayc:2,hc:6,ac:5,ref:"Вилков В."},
     {date:"07.04.2024",hg:0,ag:0,hyc:2,ayc:3,hc:5,ac:7,ref:"Карасев С."},
+    {date:"08.10.2023",hg:1,ag:1,hyc:2,ayc:2,hc:5,ac:6,ref:"Матюнин А."},
+    {date:"12.03.2023",hg:2,ag:2,hyc:3,ayc:3,hc:6,ac:5,ref:"Левников С."},
+  ],
+  "Ахмат|Химки": [
+    {date:"10.05.2025",hg:2,ag:0,hyc:2,ayc:3,hc:5,ac:3,ref:"Безбородов А."},
+    {date:"01.12.2024",hg:1,ag:0,hyc:3,ayc:2,hc:4,ac:3,ref:"Чистяков Е."},
+    {date:"17.03.2024",hg:3,ag:1,hyc:3,ayc:4,hc:6,ac:2,ref:"Москалев А."},
+    {date:"22.10.2023",hg:1,ag:1,hyc:2,ayc:3,hc:4,ac:3,ref:"Вилков В."},
+    {date:"26.02.2023",hg:2,ag:2,hyc:4,ayc:3,hc:5,ac:4,ref:"Лапочкин С."},
   ],
   "Локомотив|Ростов": [
     {date:"11.05.2025",hg:2,ag:1,hyc:2,ayc:2,hc:6,ac:4,ref:"Чистяков Е."},
     {date:"17.11.2024",hg:0,ag:1,hyc:3,ayc:1,hc:5,ac:5,ref:"Москалев А."},
     {date:"14.04.2024",hg:1,ag:1,hyc:2,ayc:2,hc:7,ac:4,ref:"Лапочкин С."},
+    {date:"05.11.2023",hg:2,ag:0,hyc:2,ayc:3,hc:6,ac:3,ref:"Матюнин А."},
+    {date:"12.03.2023",hg:1,ag:2,hyc:2,ayc:2,hc:5,ac:5,ref:"Безбородов А."},
+  ],
+  "Оренбург|Рубин": [
+    {date:"09.05.2025",hg:1,ag:1,hyc:3,ayc:3,hc:4,ac:5,ref:"Москалев А."},
+    {date:"24.11.2024",hg:0,ag:2,hyc:2,ayc:2,hc:3,ac:6,ref:"Лапочкин С."},
+    {date:"31.03.2024",hg:1,ag:0,hyc:3,ayc:3,hc:5,ac:4,ref:"Вилков В."},
+    {date:"12.11.2023",hg:2,ag:1,hyc:2,ayc:3,hc:4,ac:5,ref:"Чистяков Е."},
+    {date:"19.02.2023",hg:1,ag:2,hyc:3,ayc:2,hc:3,ac:5,ref:"Карасев С."},
   ],
   "Динамо|Крылья Советов": [
     {date:"04.05.2025",hg:2,ag:0,hyc:1,ayc:2,hc:6,ac:3,ref:"Матюнин А."},
     {date:"24.11.2024",hg:1,ag:1,hyc:2,ayc:3,hc:5,ac:4,ref:"Карасев С."},
     {date:"21.04.2024",hg:3,ag:1,hyc:2,ayc:2,hc:7,ac:3,ref:"Вилков В."},
+    {date:"19.11.2023",hg:2,ag:0,hyc:1,ayc:3,hc:6,ac:2,ref:"Безбородов А."},
+    {date:"12.03.2023",hg:1,ag:1,hyc:2,ayc:2,hc:5,ac:4,ref:"Москалев А."},
   ],
 };
+
+// ================================================================
+// BOOKMAKER ODDS (данные по матчам тура 22 · март 2026)
+// Формат: yc_X_over/under — тотал ЖК, c_X — угловые,
+//         pen_yes/no — пенальти
+// ================================================================
+const BOOKMAKER_ODDS = {
+  "Сочи|Краснодар": {
+    fonbet:  {yc_3_5_o:1.91,yc_3_5_u:1.87,yc_4_5_o:2.90,yc_4_5_u:1.40,c_9_5_o:1.92,c_9_5_u:1.85,pen_y:3.25,pen_n:1.32,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.93,yc_3_5_u:1.85,yc_4_5_o:2.88,yc_4_5_u:1.41,c_9_5_o:1.90,c_9_5_u:1.87,pen_y:3.30,pen_n:1.30,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.90,yc_3_5_u:1.88,yc_4_5_o:2.85,yc_4_5_u:1.43,c_9_5_o:1.89,c_9_5_u:1.89,pen_y:3.20,pen_n:1.33,url:"https://betboom.ru/sport/Football"},
+  },
+  "Зенит|Спартак": {
+    fonbet:  {yc_3_5_o:1.85,yc_3_5_u:1.93,yc_4_5_o:2.75,yc_4_5_u:1.45,c_9_5_o:1.88,c_9_5_u:1.90,pen_y:3.40,pen_n:1.29,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.87,yc_3_5_u:1.91,yc_4_5_o:2.80,yc_4_5_u:1.43,c_9_5_o:1.86,c_9_5_u:1.92,pen_y:3.35,pen_n:1.30,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.72,yc_4_5_u:1.46,c_9_5_o:1.87,c_9_5_u:1.91,pen_y:3.38,pen_n:1.28,url:"https://betboom.ru/sport/Football"},
+  },
+  "ЦСКА|Пари НН": {
+    fonbet:  {yc_3_5_o:1.95,yc_3_5_u:1.83,yc_4_5_o:3.00,yc_4_5_u:1.38,c_9_5_o:1.85,c_9_5_u:1.93,pen_y:3.10,pen_n:1.35,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.97,yc_3_5_u:1.82,yc_4_5_o:3.05,yc_4_5_u:1.37,c_9_5_o:1.84,c_9_5_u:1.94,pen_y:3.15,pen_n:1.33,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.93,yc_3_5_u:1.85,yc_4_5_o:2.98,yc_4_5_u:1.39,c_9_5_o:1.83,c_9_5_u:1.95,pen_y:3.08,pen_n:1.36,url:"https://betboom.ru/sport/Football"},
+  },
+  "Ахмат|Химки": {
+    fonbet:  {yc_3_5_o:1.75,yc_3_5_u:2.05,yc_4_5_o:2.55,yc_4_5_u:1.52,c_8_5_o:1.90,c_8_5_u:1.88,pen_y:3.50,pen_n:1.27,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.78,yc_3_5_u:2.02,yc_4_5_o:2.60,yc_4_5_u:1.50,c_8_5_o:1.92,c_8_5_u:1.86,pen_y:3.55,pen_n:1.25,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.76,yc_3_5_u:2.04,yc_4_5_o:2.58,yc_4_5_u:1.51,c_8_5_o:1.91,c_8_5_u:1.87,pen_y:3.48,pen_n:1.28,url:"https://betboom.ru/sport/Football"},
+  },
+  "Локомотив|Ростов": {
+    fonbet:  {yc_3_5_o:1.88,yc_3_5_u:1.90,yc_4_5_o:2.82,yc_4_5_u:1.42,c_9_5_o:1.90,c_9_5_u:1.87,pen_y:3.35,pen_n:1.31,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.90,yc_3_5_u:1.88,yc_4_5_o:2.85,yc_4_5_u:1.41,c_9_5_o:1.92,c_9_5_u:1.86,pen_y:3.40,pen_n:1.29,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.87,yc_3_5_u:1.91,yc_4_5_o:2.80,yc_4_5_u:1.43,c_9_5_o:1.89,c_9_5_u:1.88,pen_y:3.33,pen_n:1.32,url:"https://betboom.ru/sport/Football"},
+  },
+  "Оренбург|Рубин": {
+    fonbet:  {yc_3_5_o:1.72,yc_3_5_u:2.10,yc_4_5_o:2.45,yc_4_5_u:1.57,c_9_5_o:1.93,c_9_5_u:1.85,pen_y:3.60,pen_n:1.25,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.74,yc_3_5_u:2.07,yc_4_5_o:2.48,yc_4_5_u:1.55,c_9_5_o:1.95,c_9_5_u:1.83,pen_y:3.65,pen_n:1.24,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.71,yc_3_5_u:2.12,yc_4_5_o:2.43,yc_4_5_u:1.58,c_9_5_o:1.92,c_9_5_u:1.86,pen_y:3.58,pen_n:1.26,url:"https://betboom.ru/sport/Football"},
+  },
+  "Динамо|Крылья Советов": {
+    fonbet:  {yc_3_5_o:1.82,yc_3_5_u:1.96,yc_4_5_o:2.70,yc_4_5_u:1.47,c_9_5_o:1.87,c_9_5_u:1.91,pen_y:3.30,pen_n:1.31,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.75,yc_4_5_u:1.45,c_9_5_o:1.89,c_9_5_u:1.89,pen_y:3.35,pen_n:1.30,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.81,yc_3_5_u:1.97,yc_4_5_o:2.68,yc_4_5_u:1.48,c_9_5_o:1.86,c_9_5_u:1.92,pen_y:3.28,pen_n:1.32,url:"https://betboom.ru/sport/Football"},
+  },
+};
+
+function getBookmakerOdds(home, away) {
+  return BOOKMAKER_ODDS[`${home}|${away}`] || BOOKMAKER_ODDS[`${away}|${home}`] || null;
+}
 
 function getH2H(home, away) {
   return H2H_HISTORY[`${home}|${away}`]
@@ -564,16 +713,21 @@ function analyzeMatch() {
   renderMarketTable('corners-table', p.corners.probs);
   renderMarketTable('medical-table', p.medical.probs);
 
-  // Bookmaker links
-  const bkHtml = renderBkLinks();
-  document.getElementById('yc-bk').innerHTML = bkHtml;
-  document.getElementById('corners-bk').innerHTML = bkHtml;
-  document.getElementById('medical-bk').innerHTML = bkHtml;
-  document.getElementById('penalty-bk').innerHTML = bkHtml;
+  // Статистические факты + value bets
+  const bkOdds = getBookmakerOdds(h, a);
+  document.getElementById('yc-facts').innerHTML = renderStatFacts(h, a, 'yc', p, bkOdds);
+  document.getElementById('corners-facts').innerHTML = renderStatFacts(h, a, 'corners', p, bkOdds);
 
-  // Статистические факты
-  document.getElementById('yc-facts').innerHTML = renderStatFacts(h, a, 'yc');
-  document.getElementById('corners-facts').innerHTML = renderStatFacts(h, a, 'corners');
+  // Правая панель прогноза
+  document.getElementById('yc-prediction').innerHTML = renderPredictionPanel(p, 'yc');
+  document.getElementById('corners-prediction').innerHTML = renderPredictionPanel(p, 'corners');
+  document.getElementById('medical-prediction').innerHTML = renderPredictionPanel(p, 'medical');
+
+  // Сравнение коэффициентов букмекеров
+  document.getElementById('yc-bk-comparison').innerHTML = renderBkComparison(p, 'yc', bkOdds);
+  document.getElementById('corners-bk-comparison').innerHTML = renderBkComparison(p, 'corners', bkOdds);
+  document.getElementById('medical-bk-comparison').innerHTML = renderBkComparison(p, 'medical', bkOdds);
+  document.getElementById('penalty-bk-comparison').innerHTML = renderBkComparison(p, 'penalty', bkOdds);
 
   // Пенальти
   renderPenaltyGauge(p.penalty.prob);
@@ -585,7 +739,7 @@ function analyzeMatch() {
 }
 
 // ----------------------------------------------------------------
-// H2H: последние 3 встречи
+// H2H: последние 5 встреч
 // ----------------------------------------------------------------
 function renderH2H(home, away) {
   const block = document.getElementById('h2h-block');
@@ -596,7 +750,7 @@ function renderH2H(home, away) {
     return;
   }
 
-  const rows = history.slice(0, 3).map(m => {
+  const rows = history.slice(0, 5).map(m => {
     const isHomeFirst = true; // история хранится как home|away
     const h2hKey = `${home}|${away}`;
     const reversed = !H2H_HISTORY[h2hKey] && H2H_HISTORY[`${away}|${home}`];
@@ -620,7 +774,7 @@ function renderH2H(home, away) {
 
   block.style.display = 'block';
   block.innerHTML = `<div class="card" style="margin-bottom:16px">
-    <div class="card-title">🤝 Последние очные встречи: ${home} — ${away}</div>
+    <div class="card-title">🤝 Последние 5 очных встреч: ${home} — ${away}</div>
     ${rows}
   </div>`;
 }
@@ -647,73 +801,273 @@ function renderMarketTable(tableId, probs) {
 }
 
 // ----------------------------------------------------------------
-// Bookmaker links: Фонбет, Винлайн, Бетбум
+// Панель прогноза (правая колонка)
 // ----------------------------------------------------------------
-function renderBkLinks() {
-  const bks = [
-    {name:'Фонбет', url:'https://www.fonbet.ru/sports/football/', cls:'bk-fonbet'},
-    {name:'Винлайн', url:'https://www.winline.ru/sports/football/', cls:'bk-winline'},
-    {name:'Бетбум', url:'https://betboom.ru/sport/Football', cls:'bk-betboom'},
-  ];
-  return bks.map(b =>
-    `<a href="${b.url}" target="_blank" rel="noopener" class="bk-btn ${b.cls}">
-      🏷 ${b.name} →
-    </a>`
-  ).join('');
+function renderPredictionPanel(pred, market) {
+  const conf = Math.round(pred.confidence * 100);
+  const confColor = conf >= 75 ? 'var(--green)' : conf >= 60 ? 'var(--yellow)' : 'var(--muted)';
+
+  let mainRec = '';
+  let details = [];
+
+  if (market === 'yc') {
+    const exp = pred.yc.expected;
+    const line = exp >= 4.2 ? 4.5 : exp >= 3.5 ? 3.5 : 2.5;
+    const overProb = pOver(exp, line);
+    mainRec = overProb > 0.55
+      ? `Тотал ЖК Больше ${line} (${Math.round(overProb*100)}%)`
+      : `Тотал ЖК Меньше ${line} (${Math.round((1-overProb)*100)}%)`;
+    details = [
+      ['Ожидается ЖК', exp.toFixed(1)],
+      ['Линия (рек.)', line],
+      ['Вероятность Б', Math.round(overProb*100)+'%'],
+      ['Вероятность М', Math.round((1-overProb)*100)+'%'],
+    ];
+  } else if (market === 'corners') {
+    const exp = pred.corners.expected;
+    const line = exp >= 11 ? 11.5 : exp >= 9.5 ? 9.5 : 8.5;
+    const overProb = pOver(exp, line);
+    mainRec = overProb > 0.55
+      ? `Тотал угл. Больше ${line} (${Math.round(overProb*100)}%)`
+      : `Тотал угл. Меньше ${line} (${Math.round((1-overProb)*100)}%)`;
+    details = [
+      ['Ожидается угловых', exp.toFixed(1)],
+      ['Линия (рек.)', line],
+      ['Вероятность Б', Math.round(overProb*100)+'%'],
+      ['Вероятность М', Math.round((1-overProb)*100)+'%'],
+    ];
+  } else if (market === 'medical') {
+    const exp = pred.medical.expected;
+    const line = exp >= 2 ? 1.5 : 0.5;
+    const overProb = pOver(exp, line);
+    mainRec = overProb > 0.55
+      ? `Медбригада Больше ${line} (${Math.round(overProb*100)}%)`
+      : `Медбригада Меньше ${line} (${Math.round((1-overProb)*100)}%)`;
+    details = [
+      ['Ожидается выходов', exp.toFixed(1)],
+      ['Линия (рек.)', line],
+      ['Вероятность Б', Math.round(overProb*100)+'%'],
+      ['Вероятность М', Math.round((1-overProb)*100)+'%'],
+    ];
+  }
+
+  const factorsText = pred.factors.join(', ');
+  const refNote = pred.referee ? `Судья: <strong>${pred.referee}</strong>` : 'Судья не указан';
+
+  return `
+    <div class="pred-recommendation">🎯 ${mainRec}</div>
+    ${details.map(([l,v])=>`<div class="pred-row">
+      <span class="pred-label">${l}</span>
+      <span class="pred-val">${v}</span>
+    </div>`).join('')}
+    <div class="pred-row">
+      <span class="pred-label">Уверенность</span>
+      <span style="font-weight:700;color:${confColor}">${conf}%</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6">
+      ${refNote}<br>Факторы: ${factorsText}
+    </div>`;
 }
 
 // ----------------------------------------------------------------
-// Statistical facts (на основе данных команд)
+// Сравнение коэффициентов букмекеров (правая колонка)
 // ----------------------------------------------------------------
-function renderStatFacts(homeName, awayName, market) {
+function renderBkComparison(pred, market, bkOdds) {
+  if (!bkOdds) {
+    return `<div class="info-box" style="margin-top:10px;font-size:12px">
+      Выберите матч из расписания для отображения коэффициентов букмекеров</div>`;
+  }
+
+  const bkList = [
+    {key:'fonbet',  name:'Фонбет',  cls:'bk-fonbet',  url: bkOdds.fonbet?.url},
+    {key:'winline', name:'Винлайн', cls:'bk-winline', url: bkOdds.winline?.url},
+    {key:'betboom', name:'Бетбум',  cls:'bk-betboom', url: bkOdds.betboom?.url},
+  ];
+
+  // Определяем линии для сравнения
+  let lines = [];
+  if (market === 'yc') {
+    const exp = pred.yc.expected;
+    const mainLine = exp >= 4.2 ? 4.5 : 3.5;
+    const modelOverProb = pOver(exp, mainLine);
+    const modelUnderProb = pUnder(exp, mainLine);
+    lines = [
+      {label:`ЖК Б ${mainLine}`, modelProb: modelOverProb,
+        getOdds: b => b[`yc_${mainLine.toString().replace('.','_')}_o`] || b.yc_3_5_o},
+      {label:`ЖК М ${mainLine}`, modelProb: modelUnderProb,
+        getOdds: b => b[`yc_${mainLine.toString().replace('.','_')}_u`] || b.yc_3_5_u},
+    ];
+    // Дополнительная линия 4.5
+    if (mainLine === 3.5) {
+      const op2 = pOver(exp, 4.5);
+      lines.push({label:'ЖК Б 4.5', modelProb: op2, getOdds: b => b.yc_4_5_o});
+    }
+  } else if (market === 'corners') {
+    const exp = pred.corners.expected;
+    const mainLine = exp >= 10 ? 10.5 : 9.5;
+    lines = [
+      {label:`Угл. Б ${mainLine}`, modelProb: pOver(exp, mainLine),
+        getOdds: b => b.c_9_5_o || b.c_8_5_o},
+      {label:`Угл. М ${mainLine}`, modelProb: pUnder(exp, mainLine),
+        getOdds: b => b.c_9_5_u || b.c_8_5_u},
+    ];
+  } else if (market === 'penalty') {
+    const prob = pred.penalty.prob;
+    lines = [
+      {label:'Пенальти ДА', modelProb: prob, getOdds: b => b.pen_y},
+      {label:'Пенальти НЕТ', modelProb: 1-prob, getOdds: b => b.pen_n},
+    ];
+  } else if (market === 'medical') {
+    const exp = pred.medical.expected;
+    lines = [
+      {label:'Медбр. Б 1.5', modelProb: pOver(exp, 1.5), getOdds: b => null},
+    ];
+    return `<div class="warn-box" style="margin-top:10px;font-size:12px">
+      Коэффициенты по медбригаде доступны не у всех букмекеров — проверьте вручную</div>`;
+  }
+
+  const VALUE_EDGE = 0.05; // 5% преимущество = value bet
+
+  let html = `<div style="margin-top:14px">
+    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:8px">📈 Коэффициенты букмекеров</div>
+    <table class="bk-compare-table">
+      <thead><tr>
+        <th>Исход</th>
+        <th>Модель</th>
+        ${bkList.map(b=>`<th><a href="${b.url}" target="_blank" rel="noopener" class="bk-link ${b.cls}">${b.name}</a></th>`).join('')}
+      </tr></thead>
+      <tbody>`;
+
+  lines.forEach(line => {
+    html += `<tr><td>${line.label}</td>`;
+    html += `<td><span class="bk-odds-val">${(1/line.modelProb).toFixed(2)}</span>
+      <span style="font-size:10px;color:var(--muted);display:block">${Math.round(line.modelProb*100)}%</span></td>`;
+
+    bkList.forEach(bk => {
+      const bkData = bkOdds[bk.key];
+      const bkOddsVal = bkData ? line.getOdds(bkData) : null;
+      if (!bkOddsVal) {
+        html += `<td style="color:var(--muted)">—</td>`;
+        return;
+      }
+      const bkImplied = 1 / bkOddsVal;
+      const edge = line.modelProb - bkImplied;
+      const isValue = edge > VALUE_EDGE;
+      const edgeStr = (edge >= 0 ? '+' : '') + Math.round(edge*100) + '%';
+      html += `<td>
+        <span class="bk-odds-val ${isValue?'bk-value':'bk-neutral'}">${bkOddsVal.toFixed(2)}</span>
+        ${isValue ? `<span class="edge-badge">▲${edgeStr}</span>` : ''}
+        ${!isValue && edge < -0.03 ? `<span class="edge-badge neg">${edgeStr}</span>` : ''}
+      </td>`;
+    });
+
+    html += '</tr>';
+  });
+
+  html += `</tbody></table></div>`;
+
+  // Сноска с ценностными ставками
+  const valueFounds = [];
+  lines.forEach(line => {
+    bkList.forEach(bk => {
+      const bkData = bkOdds[bk.key];
+      const bkOddsVal = bkData ? line.getOdds(bkData) : null;
+      if (!bkOddsVal) return;
+      const edge = line.modelProb - 1/bkOddsVal;
+      if (edge > VALUE_EDGE) {
+        valueFounds.push(`<strong>${bk.name}</strong>: ${line.label} @ ${bkOddsVal.toFixed(2)} (преим. +${Math.round(edge*100)}%)`);
+      }
+    });
+  });
+
+  if (valueFounds.length > 0) {
+    html += `<div class="success-box" style="margin-top:10px;font-size:12px">
+      🔍 <strong>Потенциальные value-ставки:</strong><br>${valueFounds.join('<br>')}
+    </div>`;
+  }
+
+  return html;
+}
+
+// ----------------------------------------------------------------
+// Статистические факты + выявление value bets vs букмекеров
+// ----------------------------------------------------------------
+function renderStatFacts(homeName, awayName, market, pred, bkOdds) {
   const h = TEAMS[homeName];
   const a = TEAMS[awayName];
   if (!h || !a) return '';
 
   const RPL_AVG_YC = 3.4;
   const RPL_AVG_CORNERS = 9.8;
+  const VALUE_EDGE = 0.05;
   const facts = [];
   let prognoz = '';
+  const valueBets = [];
+
+  // Вспомогательная функция поиска value в BK
+  function checkValue(modelProb, label) {
+    if (!bkOdds || !pred) return;
+    ['fonbet','winline','betboom'].forEach(bk => {
+      const d = bkOdds[bk];
+      if (!d) return;
+      let bkOddsVal = null;
+      if (market === 'yc') {
+        if (label.includes('3.5')) bkOddsVal = label.includes('Б') ? d.yc_3_5_o : d.yc_3_5_u;
+        else if (label.includes('4.5')) bkOddsVal = label.includes('Б') ? d.yc_4_5_o : d.yc_4_5_u;
+      } else if (market === 'corners') {
+        bkOddsVal = label.includes('Б') ? (d.c_9_5_o||d.c_8_5_o) : (d.c_9_5_u||d.c_8_5_u);
+      }
+      if (!bkOddsVal) return;
+      const edge = modelProb - 1/bkOddsVal;
+      const bkName = bk==='fonbet'?'Фонбет':bk==='winline'?'Винлайн':'Бетбум';
+      if (edge > VALUE_EDGE) {
+        valueBets.push(`${bkName}: <strong>${label}</strong> @ ${bkOddsVal.toFixed(2)} (преимущество <strong>+${Math.round(edge*100)}%</strong>)`);
+      }
+    });
+  }
 
   if (market === 'yc') {
-    const hYC = h.avg_yellow;  // общее среднее
+    const hYC = h.avg_yellow;
     const aYC = a.avg_yellow;
     const hYCh = h.avg_yellow_h;
     const aYCa = a.avg_yellow_a;
     const totalExpected = hYCh + aYCa;
     const ycDiff = hYCh - aYCa;
 
-    // Факт 1: низкое/высокое количество ЖК у команды
     if (hYC <= 1.55) {
-      facts.push(`Команда <strong>${homeName}</strong> берёт в среднем мало желтых карточек — ${hYC.toFixed(2)} за матч (лига: ${RPL_AVG_YC/2})`);
+      facts.push(`<strong>${homeName}</strong> берёт в среднем мало ЖК — ${hYC.toFixed(2)}/матч (РПЛ в среднем: ${(RPL_AVG_YC/2).toFixed(1)})`);
     } else if (hYC >= 1.82) {
-      facts.push(`Команда <strong>${homeName}</strong> получает много желтых карточек — ${hYC.toFixed(2)} за матч (лига: ${RPL_AVG_YC/2})`);
+      facts.push(`<strong>${homeName}</strong> получает много ЖК — ${hYC.toFixed(2)}/матч (выше среднего по РПЛ)`);
     }
-
     if (aYC <= 1.55) {
-      facts.push(`Команда <strong>${awayName}</strong> берёт в среднем мало желтых карточек — ${aYC.toFixed(2)} за матч`);
+      facts.push(`<strong>${awayName}</strong> берёт мало ЖК — ${aYC.toFixed(2)}/матч`);
     } else if (aYC >= 1.82) {
-      facts.push(`Команда <strong>${awayName}</strong> получает много желтых карточек — ${aYC.toFixed(2)} за матч`);
+      facts.push(`<strong>${awayName}</strong> получает много ЖК — ${aYC.toFixed(2)}/матч`);
     }
 
-    // Факт 2: разница по ЖК
     if (Math.abs(ycDiff) >= 0.25) {
       const leader = ycDiff < 0 ? homeName : awayName;
       const trailer = ycDiff < 0 ? awayName : homeName;
-      const diffAbs = Math.abs(ycDiff).toFixed(2);
-      facts.push(`<strong>${leader}</strong> берёт в среднем на ${diffAbs} ЖК меньше, чем <strong>${trailer}</strong> в матчах подобного формата`);
-
-      // Прогноз по форе
       const hcpVal = Math.abs(ycDiff) >= 0.4 ? 1.5 : 0.5;
       const sign = ycDiff < 0 ? '+' : '-';
-      prognoz = `Прогноз: фора ${leader} ${sign}${hcpVal} по желтым карточкам`;
+      facts.push(`<strong>${leader}</strong> в среднем на ${Math.abs(ycDiff).toFixed(2)} ЖК меньше чем <strong>${trailer}</strong>`);
+      prognoz = `Прогноз: фора ${leader} ${sign}${hcpVal} по ЖК`;
     }
 
-    // Факт 3: тотал
-    if (totalExpected > RPL_AVG_YC * 1.1) {
-      facts.push(`Ожидается <strong>высокое</strong> число желтых карточек — оба клуба грубят выше среднего по РПЛ`);
-    } else if (totalExpected < RPL_AVG_YC * 0.9) {
-      facts.push(`Ожидается <strong>мало</strong> желтых карточек — оба клуба играют относительно чисто`);
+    if (pred) {
+      const exp = pred.yc.expected;
+      if (totalExpected > RPL_AVG_YC * 1.10) {
+        facts.push(`Ожидается <strong>высокое</strong> число ЖК (${exp.toFixed(1)}) — оба клуба грубят выше среднего`);
+        checkValue(pOver(exp, 3.5), 'ЖК Б 3.5');
+        checkValue(pOver(exp, 4.5), 'ЖК Б 4.5');
+      } else if (totalExpected < RPL_AVG_YC * 0.90) {
+        facts.push(`Ожидается <strong>мало</strong> ЖК (${exp.toFixed(1)}) — оба клуба играют относительно чисто`);
+        checkValue(pUnder(exp, 3.5), 'ЖК М 3.5');
+      } else {
+        checkValue(pOver(exp, 3.5), 'ЖК Б 3.5');
+        checkValue(pUnder(exp, 3.5), 'ЖК М 3.5');
+        checkValue(pOver(exp, 4.5), 'ЖК Б 4.5');
+      }
     }
 
   } else if (market === 'corners') {
@@ -723,35 +1077,51 @@ function renderStatFacts(homeName, awayName, market) {
     const cDiff = hC - aC;
 
     if (hC >= 5.5) {
-      facts.push(`Команда <strong>${homeName}</strong> дома зарабатывает много угловых — ${hC.toFixed(1)} за матч`);
+      facts.push(`<strong>${homeName}</strong> дома зарабатывает много угловых — ${hC.toFixed(1)}/матч`);
+    } else if (hC <= 4.3) {
+      facts.push(`<strong>${homeName}</strong> дома зарабатывает мало угловых — ${hC.toFixed(1)}/матч`);
     }
     if (aC <= 3.8) {
-      facts.push(`Команда <strong>${awayName}</strong> в гостях зарабатывает мало угловых — ${aC.toFixed(1)} за матч`);
+      facts.push(`<strong>${awayName}</strong> в гостях зарабатывает мало угловых — ${aC.toFixed(1)}/матч`);
     }
 
     if (Math.abs(cDiff) >= 1.0) {
       const leader = cDiff > 0 ? homeName : awayName;
-      const trailer = cDiff > 0 ? awayName : homeName;
-      facts.push(`<strong>${leader}</strong> выигрывает по угловым в этом противостоянии — разница ${Math.abs(cDiff).toFixed(1)} за матч`);
       const hcpVal = Math.abs(cDiff) >= 2.0 ? 2.5 : 1.5;
       const sign = cDiff > 0 ? '-' : '+';
+      facts.push(`<strong>${leader}</strong> выигрывает по угловым — разница ${Math.abs(cDiff).toFixed(1)}/матч`);
       prognoz = `Прогноз: фора ${leader} ${sign}${hcpVal} по угловым`;
     }
 
-    if (totalCorners > RPL_AVG_CORNERS * 1.05) {
-      facts.push(`Ожидается много угловых — атакующие стили обеих команд дают больше стандартов`);
-    } else if (totalCorners < RPL_AVG_CORNERS * 0.9) {
-      facts.push(`Ожидается мало угловых — оборонительная тактика обеих команд`);
+    if (pred) {
+      const exp = pred.corners.expected;
+      const mainLine = exp >= 10 ? 10.5 : 9.5;
+      if (totalCorners > RPL_AVG_CORNERS * 1.05) {
+        facts.push(`Ожидается много угловых (${exp.toFixed(1)}) — атакующий стиль обеих команд`);
+        checkValue(pOver(exp, mainLine), `Угл. Б ${mainLine}`);
+      } else if (totalCorners < RPL_AVG_CORNERS * 0.90) {
+        facts.push(`Ожидается мало угловых (${exp.toFixed(1)}) — оборонительный стиль`);
+        checkValue(pUnder(exp, mainLine), `Угл. М ${mainLine}`);
+      } else {
+        checkValue(pOver(exp, mainLine), `Угл. Б ${mainLine}`);
+        checkValue(pUnder(exp, mainLine), `Угл. М ${mainLine}`);
+      }
     }
   }
 
-  if (facts.length === 0) return '';
+  if (facts.length === 0 && valueBets.length === 0) return '';
 
-  let html = `<div style="margin-top:16px">
-    <div style="font-size:14px;font-weight:700;color:#fff;margin-bottom:8px">📊 Статистические факты</div>`;
+  let html = `<div style="margin-top:8px">
+    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:6px">📊 Статистические факты</div>`;
   html += facts.map(f => `<div class="fact-block">${f}</div>`).join('');
   if (prognoz) {
     html += `<div class="fact-prognoz">🎯 ${prognoz}</div>`;
+  }
+  if (valueBets.length > 0) {
+    html += `<div style="margin-top:10px">
+      <div class="value-bet-title">🔍 Где букмекеры занизили линию</div>
+      ${valueBets.map(v=>`<div class="value-bet-block">${v}</div>`).join('')}
+    </div>`;
   }
   html += `</div>`;
   return html;
@@ -783,19 +1153,24 @@ function renderPenaltyGauge(prob) {
 function renderPenaltyDetails(prob) {
   const fairYes = (1/Math.max(prob,0.001)).toFixed(2);
   const fairNo  = (1/(Math.max(1-prob,0.001))).toFixed(2);
+  const rec = prob > 0.32 ? `Рекомендация: пенальти <strong>ДА</strong> (${Math.round(prob*100)}%)` :
+              prob < 0.22 ? `Рекомендация: пенальти <strong>НЕТ</strong> (${Math.round((1-prob)*100)}%)` :
+              'Нейтральная зона — пенальти возможен';
+  const recCls = prob > 0.32 ? 'pred-recommendation' : prob < 0.22 ? 'pred-warning' : 'info-box';
   document.getElementById('penalty-details').innerHTML = `
-    <div style="display:grid;gap:12px;margin-top:8px">
+    <div class="${recCls}" style="margin-bottom:12px">${rec}</div>
+    <div style="display:grid;gap:10px">
       ${[
-        ['⚖️ Справедливый коэф ДА', fairYes],
-        ['⚖️ Справедливый коэф НЕТ', fairNo],
-      ].map(([l,v])=>`<div style="display:flex;justify-content:space-between;
-        align-items:center;padding:10px 14px;background:var(--surface2);
-        border-radius:8px;border:1px solid var(--border)">
-        <span style="font-size:13px;color:var(--muted)">${l}</span>
-        <span style="font-weight:700;font-size:16px">${v}</span>
+        ['⚖️ Справедливый коэф ДА', fairYes, prob],
+        ['⚖️ Справедливый коэф НЕТ', fairNo, 1-prob],
+      ].map(([l,v,p])=>`<div class="pred-row">
+        <span class="pred-label">${l}</span>
+        <span style="font-weight:700;font-size:15px">${v}
+          <span style="font-size:11px;color:var(--muted);font-weight:400">(${Math.round(p*100)}%)</span>
+        </span>
       </div>`).join('')}
     </div>
-    <div class="info-box" style="margin-top:12px">
+    <div class="info-box" style="margin-top:12px;font-size:12px">
       Среднее по РПЛ: <strong>28%</strong> матчей содержат пенальти
     </div>`;
 }
