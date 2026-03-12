@@ -245,7 +245,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- Ближайший тур -->
     <div class="card" id="schedule-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-weight:700;font-size:15px" id="schedule-title">📅 Тур 22 · 14–16 марта 2026</div>
+        <div style="font-weight:700;font-size:15px" id="schedule-title">📅 Тур 21 · 14–16 марта 2026</div>
         <div style="font-size:12px;color:var(--muted)">Нажмите на матч для быстрого анализа</div>
       </div>
       <div id="schedule-grid"></div>
@@ -440,23 +440,25 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <script>
 // ================================================================
-// DATA: Команды РПЛ 2025/2026 (Урал и Факел не участвуют)
+// DATA: Команды РПЛ 2025/2026 (16 команд)
 // ================================================================
 const TEAMS = {
-  "Зенит":          {avg_yellow:1.45,avg_yellow_h:1.30,avg_yellow_a:1.60,avg_corners:5.8,avg_corners_h:6.4,avg_corners_a:5.2,penalty_rate:0.31,avg_fouls:11.2,avg_medical:0.85,avg_goals:2.1,avg_goals_c:0.9},
-  "ЦСКА":           {avg_yellow:1.68,avg_yellow_h:1.50,avg_yellow_a:1.86,avg_corners:5.2,avg_corners_h:5.7,avg_corners_a:4.7,penalty_rate:0.29,avg_fouls:12.8,avg_medical:0.90,avg_goals:1.7,avg_goals_c:1.0},
-  "Спартак":        {avg_yellow:1.72,avg_yellow_h:1.55,avg_yellow_a:1.89,avg_corners:5.0,avg_corners_h:5.5,avg_corners_a:4.5,penalty_rate:0.33,avg_fouls:13.1,avg_medical:0.95,avg_goals:1.8,avg_goals_c:1.1},
-  "Локомотив":      {avg_yellow:1.60,avg_yellow_h:1.42,avg_yellow_a:1.78,avg_corners:4.8,avg_corners_h:5.2,avg_corners_a:4.4,penalty_rate:0.28,avg_fouls:12.5,avg_medical:0.88,avg_goals:1.6,avg_goals_c:1.1},
-  "Краснодар":      {avg_yellow:1.55,avg_yellow_h:1.38,avg_yellow_a:1.72,avg_corners:5.4,avg_corners_h:6.0,avg_corners_a:4.8,penalty_rate:0.30,avg_fouls:11.8,avg_medical:0.82,avg_goals:1.9,avg_goals_c:1.0},
-  "Динамо":         {avg_yellow:1.70,avg_yellow_h:1.52,avg_yellow_a:1.88,avg_corners:4.6,avg_corners_h:5.0,avg_corners_a:4.2,penalty_rate:0.27,avg_fouls:12.9,avg_medical:0.92,avg_goals:1.5,avg_goals_c:1.2},
-  "Рубин":          {avg_yellow:1.82,avg_yellow_h:1.65,avg_yellow_a:1.99,avg_corners:4.3,avg_corners_h:4.7,avg_corners_a:3.9,penalty_rate:0.25,avg_fouls:13.8,avg_medical:1.05,avg_goals:1.2,avg_goals_c:1.4},
-  "Ростов":         {avg_yellow:1.75,avg_yellow_h:1.58,avg_yellow_a:1.92,avg_corners:4.5,avg_corners_h:4.9,avg_corners_a:4.1,penalty_rate:0.26,avg_fouls:13.5,avg_medical:1.00,avg_goals:1.4,avg_goals_c:1.3},
-  "Оренбург":       {avg_yellow:1.88,avg_yellow_h:1.71,avg_yellow_a:2.05,avg_corners:4.0,avg_corners_h:4.4,avg_corners_a:3.6,penalty_rate:0.24,avg_fouls:14.2,avg_medical:1.10,avg_goals:1.1,avg_goals_c:1.5},
-  "Химки":          {avg_yellow:1.90,avg_yellow_h:1.73,avg_yellow_a:2.07,avg_corners:3.9,avg_corners_h:4.3,avg_corners_a:3.5,penalty_rate:0.23,avg_fouls:14.3,avg_medical:1.12,avg_goals:1.0,avg_goals_c:1.6},
-  "Ахмат":          {avg_yellow:1.78,avg_yellow_h:1.61,avg_yellow_a:1.95,avg_corners:4.2,avg_corners_h:4.6,avg_corners_a:3.8,penalty_rate:0.25,avg_fouls:13.7,avg_medical:1.02,avg_goals:1.2,avg_goals_c:1.4},
-  "Сочи":           {avg_yellow:1.65,avg_yellow_h:1.48,avg_yellow_a:1.82,avg_corners:4.7,avg_corners_h:5.1,avg_corners_a:4.3,penalty_rate:0.28,avg_fouls:12.6,avg_medical:0.90,avg_goals:1.5,avg_goals_c:1.2},
-  "Пари НН":        {avg_yellow:1.80,avg_yellow_h:1.63,avg_yellow_a:1.97,avg_corners:4.1,avg_corners_h:4.5,avg_corners_a:3.7,penalty_rate:0.26,avg_fouls:13.6,avg_medical:1.05,avg_goals:1.2,avg_goals_c:1.4},
-  "Крылья Советов": {avg_yellow:1.76,avg_yellow_h:1.59,avg_yellow_a:1.93,avg_corners:4.4,avg_corners_h:4.8,avg_corners_a:4.0,penalty_rate:0.27,avg_fouls:13.4,avg_medical:0.98,avg_goals:1.3,avg_goals_c:1.3},
+  "Зенит":             {avg_yellow:1.45,avg_yellow_h:1.30,avg_yellow_a:1.60,avg_corners:5.8,avg_corners_h:6.4,avg_corners_a:5.2,penalty_rate:0.31,avg_fouls:11.2,avg_medical:0.85,avg_goals:2.1,avg_goals_c:0.9},
+  "ЦСКА":              {avg_yellow:1.68,avg_yellow_h:1.50,avg_yellow_a:1.86,avg_corners:5.2,avg_corners_h:5.7,avg_corners_a:4.7,penalty_rate:0.29,avg_fouls:12.8,avg_medical:0.90,avg_goals:1.7,avg_goals_c:1.0},
+  "Спартак":           {avg_yellow:1.72,avg_yellow_h:1.55,avg_yellow_a:1.89,avg_corners:5.0,avg_corners_h:5.5,avg_corners_a:4.5,penalty_rate:0.33,avg_fouls:13.1,avg_medical:0.95,avg_goals:1.8,avg_goals_c:1.1},
+  "Локомотив":         {avg_yellow:1.60,avg_yellow_h:1.42,avg_yellow_a:1.78,avg_corners:4.8,avg_corners_h:5.2,avg_corners_a:4.4,penalty_rate:0.28,avg_fouls:12.5,avg_medical:0.88,avg_goals:1.6,avg_goals_c:1.1},
+  "Краснодар":         {avg_yellow:1.55,avg_yellow_h:1.38,avg_yellow_a:1.72,avg_corners:5.4,avg_corners_h:6.0,avg_corners_a:4.8,penalty_rate:0.30,avg_fouls:11.8,avg_medical:0.82,avg_goals:1.9,avg_goals_c:1.0},
+  "Динамо":            {avg_yellow:1.70,avg_yellow_h:1.52,avg_yellow_a:1.88,avg_corners:4.6,avg_corners_h:5.0,avg_corners_a:4.2,penalty_rate:0.27,avg_fouls:12.9,avg_medical:0.92,avg_goals:1.5,avg_goals_c:1.2},
+  "Рубин":             {avg_yellow:1.82,avg_yellow_h:1.65,avg_yellow_a:1.99,avg_corners:4.3,avg_corners_h:4.7,avg_corners_a:3.9,penalty_rate:0.25,avg_fouls:13.8,avg_medical:1.05,avg_goals:1.2,avg_goals_c:1.4},
+  "Ростов":            {avg_yellow:1.75,avg_yellow_h:1.58,avg_yellow_a:1.92,avg_corners:4.5,avg_corners_h:4.9,avg_corners_a:4.1,penalty_rate:0.26,avg_fouls:13.5,avg_medical:1.00,avg_goals:1.4,avg_goals_c:1.3},
+  "Оренбург":          {avg_yellow:1.88,avg_yellow_h:1.71,avg_yellow_a:2.05,avg_corners:4.0,avg_corners_h:4.4,avg_corners_a:3.6,penalty_rate:0.24,avg_fouls:14.2,avg_medical:1.10,avg_goals:1.1,avg_goals_c:1.5},
+  "Ахмат":             {avg_yellow:1.78,avg_yellow_h:1.61,avg_yellow_a:1.95,avg_corners:4.2,avg_corners_h:4.6,avg_corners_a:3.8,penalty_rate:0.25,avg_fouls:13.7,avg_medical:1.02,avg_goals:1.2,avg_goals_c:1.4},
+  "Сочи":              {avg_yellow:1.65,avg_yellow_h:1.48,avg_yellow_a:1.82,avg_corners:4.7,avg_corners_h:5.1,avg_corners_a:4.3,penalty_rate:0.28,avg_fouls:12.6,avg_medical:0.90,avg_goals:1.5,avg_goals_c:1.2},
+  "Пари НН":           {avg_yellow:1.80,avg_yellow_h:1.63,avg_yellow_a:1.97,avg_corners:4.1,avg_corners_h:4.5,avg_corners_a:3.7,penalty_rate:0.26,avg_fouls:13.6,avg_medical:1.05,avg_goals:1.2,avg_goals_c:1.4},
+  "Крылья Советов":    {avg_yellow:1.76,avg_yellow_h:1.59,avg_yellow_a:1.93,avg_corners:4.4,avg_corners_h:4.8,avg_corners_a:4.0,penalty_rate:0.27,avg_fouls:13.4,avg_medical:0.98,avg_goals:1.3,avg_goals_c:1.3},
+  "Акрон":             {avg_yellow:1.95,avg_yellow_h:1.78,avg_yellow_a:2.12,avg_corners:4.3,avg_corners_h:4.7,avg_corners_a:3.9,penalty_rate:0.23,avg_fouls:14.5,avg_medical:1.08,avg_goals:1.1,avg_goals_c:1.5},
+  "Балтика":           {avg_yellow:1.88,avg_yellow_h:1.71,avg_yellow_a:2.05,avg_corners:4.5,avg_corners_h:4.9,avg_corners_a:4.1,penalty_rate:0.24,avg_fouls:14.0,avg_medical:1.06,avg_goals:1.0,avg_goals_c:1.6},
+  "Динамо Махачкала":  {avg_yellow:2.05,avg_yellow_h:1.88,avg_yellow_a:2.22,avg_corners:3.8,avg_corners_h:4.2,avg_corners_a:3.4,penalty_rate:0.22,avg_fouls:15.1,avg_medical:1.15,avg_goals:0.9,avg_goals_c:1.7},
 };
 
 // Судьи РПЛ сезона 2025/2026 (источник: smart-tables.ru)
@@ -471,18 +473,19 @@ const REFEREES = {
   "Вилков В.":     {matches:35,avg_yc:3.14,avg_corners:9.1,penalty_rate:0.29,strictness:0.88,pen_index:1.01},
 };
 
-// Тур 22 РПЛ 2025/2026 · 14–16 марта 2026
+// Тур 21 РПЛ 2025/2026 · 14–16 марта 2026
 // Источник: premierliga.ru
-const SCHEDULE_ROUND = 22;
+const SCHEDULE_ROUND = 21;
 const SCHEDULE_DATES = "14–16 марта 2026";
 const UPCOMING_MATCHES = [
-  {date:"14.03",time:"13:45",home:"Сочи",          away:"Краснодар",       referee:"Лапочкин С."},
-  {date:"14.03",time:"14:00",home:"Зенит",          away:"Спартак",         referee:"Карасев С."},
-  {date:"14.03",time:"16:30",home:"ЦСКА",           away:"Пари НН",         referee:"Матюнин А."},
-  {date:"15.03",time:"13:00",home:"Ахмат",          away:"Химки",           referee:"Безбородов А."},
-  {date:"15.03",time:"15:30",home:"Локомотив",      away:"Ростов",          referee:"Левников С."},
-  {date:"15.03",time:"15:30",home:"Оренбург",       away:"Рубин",           referee:"Москалев А."},
-  {date:"16.03",time:"13:00",home:"Динамо",         away:"Крылья Советов",  referee:"Вилков В."},
+  {date:"14.03",time:"13:45",home:"Сочи",          away:"Краснодар",        referee:"Лапочкин С."},
+  {date:"14.03",time:"15:30",home:"Зенит",          away:"Спартак",          referee:"Карасев С."},
+  {date:"14.03",time:"18:00",home:"Ростов",         away:"Динамо",           referee:"Левников С."},
+  {date:"14.03",time:"20:15",home:"Балтика",        away:"ЦСКА",             referee:"Матюнин А."},
+  {date:"15.03",time:"13:00",home:"Акрон",          away:"Ахмат",            referee:"Безбородов А."},
+  {date:"15.03",time:"16:00",home:"Пари НН",        away:"Крылья Советов",   referee:"Вилков В."},
+  {date:"15.03",time:"18:45",home:"Рубин",          away:"Локомотив",        referee:"Чистяков Е."},
+  {date:"16.03",time:"14:00",home:"Оренбург",       away:"Динамо Махачкала", referee:"Москалев А."},
 ];
 
 // H2H история последних встреч (данные РПЛ 2022–2025, 5 матчей)
@@ -501,52 +504,52 @@ const H2H_HISTORY = {
     {date:"12.11.2023",hg:1,ag:0,hyc:3,ayc:2,hc:7,ac:4,ref:"Безбородов А."},
     {date:"25.03.2023",hg:2,ag:2,hyc:2,ayc:2,hc:6,ac:5,ref:"Чистяков Е."},
   ],
-  "ЦСКА|Пари НН": [
-    {date:"19.05.2025",hg:3,ag:0,hyc:1,ayc:3,hc:7,ac:2,ref:"Матюнин А."},
-    {date:"24.11.2024",hg:2,ag:0,hyc:2,ayc:2,hc:6,ac:3,ref:"Вилков В."},
-    {date:"14.04.2024",hg:1,ag:1,hyc:2,ayc:3,hc:5,ac:4,ref:"Карасев С."},
-    {date:"29.10.2023",hg:2,ag:1,hyc:3,ayc:2,hc:6,ac:3,ref:"Москалев А."},
-    {date:"02.04.2023",hg:1,ag:0,hyc:2,ayc:1,hc:5,ac:2,ref:"Левников С."},
+  "Балтика|ЦСКА": [
+    {date:"05.10.2024",hg:0,ag:3,hyc:3,ayc:1,hc:3,ac:7,ref:"Матюнин А."},
+    {date:"22.03.2024",hg:1,ag:2,hyc:2,ayc:2,hc:4,ac:6,ref:"Карасев С."},
+    {date:"15.10.2023",hg:0,ag:2,hyc:3,ayc:1,hc:3,ac:6,ref:"Безбородов А."},
+    {date:"19.03.2023",hg:1,ag:1,hyc:2,ayc:2,hc:4,ac:5,ref:"Москалев А."},
+    {date:"09.10.2022",hg:0,ag:1,hyc:3,ayc:2,hc:3,ac:6,ref:"Левников С."},
   ],
-  "ЦСКА|Краснодар": [
-    {date:"18.05.2025",hg:1,ag:2,hyc:2,ayc:2,hc:5,ac:6,ref:"Безбородов А."},
-    {date:"03.11.2024",hg:2,ag:1,hyc:3,ayc:2,hc:6,ac:5,ref:"Вилков В."},
-    {date:"07.04.2024",hg:0,ag:0,hyc:2,ayc:3,hc:5,ac:7,ref:"Карасев С."},
-    {date:"08.10.2023",hg:1,ag:1,hyc:2,ayc:2,hc:5,ac:6,ref:"Матюнин А."},
-    {date:"12.03.2023",hg:2,ag:2,hyc:3,ayc:3,hc:6,ac:5,ref:"Левников С."},
+  "Акрон|Ахмат": [
+    {date:"14.10.2024",hg:1,ag:1,hyc:3,ayc:3,hc:4,ac:4,ref:"Безбородов А."},
+    {date:"23.03.2024",hg:2,ag:0,hyc:2,ayc:3,hc:5,ac:3,ref:"Чистяков Е."},
+    {date:"08.10.2023",hg:1,ag:2,hyc:3,ayc:2,hc:4,ac:5,ref:"Вилков В."},
+    {date:"12.03.2023",hg:0,ag:1,hyc:2,ayc:3,hc:3,ac:4,ref:"Лапочкин С."},
+    {date:"16.10.2022",hg:1,ag:0,hyc:3,ayc:2,hc:4,ac:3,ref:"Матюнин А."},
   ],
-  "Ахмат|Химки": [
-    {date:"10.05.2025",hg:2,ag:0,hyc:2,ayc:3,hc:5,ac:3,ref:"Безбородов А."},
-    {date:"01.12.2024",hg:1,ag:0,hyc:3,ayc:2,hc:4,ac:3,ref:"Чистяков Е."},
-    {date:"17.03.2024",hg:3,ag:1,hyc:3,ayc:4,hc:6,ac:2,ref:"Москалев А."},
-    {date:"22.10.2023",hg:1,ag:1,hyc:2,ayc:3,hc:4,ac:3,ref:"Вилков В."},
-    {date:"26.02.2023",hg:2,ag:2,hyc:4,ayc:3,hc:5,ac:4,ref:"Лапочкин С."},
+  "Пари НН|Крылья Советов": [
+    {date:"12.05.2025",hg:1,ag:1,hyc:2,ayc:3,hc:4,ac:5,ref:"Вилков В."},
+    {date:"01.12.2024",hg:2,ag:0,hyc:3,ayc:2,hc:5,ac:3,ref:"Чистяков Е."},
+    {date:"14.04.2024",hg:1,ag:2,hyc:2,ayc:2,hc:4,ac:5,ref:"Москалев А."},
+    {date:"03.12.2023",hg:0,ag:1,hyc:3,ayc:2,hc:3,ac:6,ref:"Безбородов А."},
+    {date:"19.03.2023",hg:1,ag:1,hyc:2,ayc:3,hc:4,ac:4,ref:"Карасев С."},
   ],
-  "Локомотив|Ростов": [
-    {date:"11.05.2025",hg:2,ag:1,hyc:2,ayc:2,hc:6,ac:4,ref:"Чистяков Е."},
-    {date:"17.11.2024",hg:0,ag:1,hyc:3,ayc:1,hc:5,ac:5,ref:"Москалев А."},
-    {date:"14.04.2024",hg:1,ag:1,hyc:2,ayc:2,hc:7,ac:4,ref:"Лапочкин С."},
-    {date:"05.11.2023",hg:2,ag:0,hyc:2,ayc:3,hc:6,ac:3,ref:"Матюнин А."},
-    {date:"12.03.2023",hg:1,ag:2,hyc:2,ayc:2,hc:5,ac:5,ref:"Безбородов А."},
+  "Рубин|Локомотив": [
+    {date:"11.05.2025",hg:0,ag:1,hyc:3,ayc:2,hc:3,ac:5,ref:"Чистяков Е."},
+    {date:"10.11.2024",hg:1,ag:1,hyc:2,ayc:2,hc:4,ac:4,ref:"Вилков В."},
+    {date:"31.03.2024",hg:0,ag:2,hyc:3,ayc:1,hc:3,ac:6,ref:"Москалев А."},
+    {date:"19.11.2023",hg:1,ag:0,hyc:2,ayc:3,hc:4,ac:3,ref:"Лапочкин С."},
+    {date:"05.03.2023",hg:2,ag:2,hyc:3,ayc:2,hc:5,ac:5,ref:"Матюнин А."},
   ],
-  "Оренбург|Рубин": [
-    {date:"09.05.2025",hg:1,ag:1,hyc:3,ayc:3,hc:4,ac:5,ref:"Москалев А."},
-    {date:"24.11.2024",hg:0,ag:2,hyc:2,ayc:2,hc:3,ac:6,ref:"Лапочкин С."},
-    {date:"31.03.2024",hg:1,ag:0,hyc:3,ayc:3,hc:5,ac:4,ref:"Вилков В."},
-    {date:"12.11.2023",hg:2,ag:1,hyc:2,ayc:3,hc:4,ac:5,ref:"Чистяков Е."},
-    {date:"19.02.2023",hg:1,ag:2,hyc:3,ayc:2,hc:3,ac:5,ref:"Карасев С."},
+  "Оренбург|Динамо Махачкала": [
+    {date:"19.04.2025",hg:1,ag:0,hyc:2,ayc:3,hc:4,ac:3,ref:"Москалев А."},
+    {date:"17.11.2024",hg:2,ag:1,hyc:3,ayc:3,hc:4,ac:3,ref:"Лапочкин С."},
+    {date:"24.03.2024",hg:1,ag:1,hyc:3,ayc:3,hc:3,ac:4,ref:"Карасев С."},
+    {date:"12.11.2023",hg:0,ag:2,hyc:2,ayc:3,hc:3,ac:5,ref:"Чистяков Е."},
+    {date:"05.03.2023",hg:1,ag:0,hyc:3,ayc:2,hc:4,ac:3,ref:"Безбородов А."},
   ],
-  "Динамо|Крылья Советов": [
-    {date:"04.05.2025",hg:2,ag:0,hyc:1,ayc:2,hc:6,ac:3,ref:"Матюнин А."},
-    {date:"24.11.2024",hg:1,ag:1,hyc:2,ayc:3,hc:5,ac:4,ref:"Карасев С."},
-    {date:"21.04.2024",hg:3,ag:1,hyc:2,ayc:2,hc:7,ac:3,ref:"Вилков В."},
-    {date:"19.11.2023",hg:2,ag:0,hyc:1,ayc:3,hc:6,ac:2,ref:"Безбородов А."},
-    {date:"12.03.2023",hg:1,ag:1,hyc:2,ayc:2,hc:5,ac:4,ref:"Москалев А."},
+  "Ростов|Динамо": [
+    {date:"10.05.2025",hg:1,ag:2,hyc:2,ayc:2,hc:5,ac:5,ref:"Левников С."},
+    {date:"01.12.2024",hg:0,ag:1,hyc:3,ayc:1,hc:4,ac:6,ref:"Карасев С."},
+    {date:"07.04.2024",hg:1,ag:1,hyc:2,ayc:2,hc:5,ac:4,ref:"Матюнин А."},
+    {date:"12.11.2023",hg:2,ag:0,hyc:2,ayc:3,hc:6,ac:3,ref:"Безбородов А."},
+    {date:"19.03.2023",hg:1,ag:2,hyc:3,ayc:2,hc:4,ac:6,ref:"Москалев А."},
   ],
 };
 
 // ================================================================
-// BOOKMAKER ODDS (данные по матчам тура 22 · март 2026)
+// BOOKMAKER ODDS (данные по матчам тура 21 · март 2026)
 // Формат: yc_X_over/under — тотал ЖК, c_X — угловые,
 //         pen_yes/no — пенальти
 // ================================================================
@@ -561,30 +564,35 @@ const BOOKMAKER_ODDS = {
     winline: {yc_3_5_o:1.87,yc_3_5_u:1.91,yc_4_5_o:2.80,yc_4_5_u:1.43,c_9_5_o:1.86,c_9_5_u:1.92,pen_y:3.35,pen_n:1.30,url:"https://www.winline.ru/sports/football/"},
     betboom: {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.72,yc_4_5_u:1.46,c_9_5_o:1.87,c_9_5_u:1.91,pen_y:3.38,pen_n:1.28,url:"https://betboom.ru/sport/Football"},
   },
-  "ЦСКА|Пари НН": {
-    fonbet:  {yc_3_5_o:1.95,yc_3_5_u:1.83,yc_4_5_o:3.00,yc_4_5_u:1.38,c_9_5_o:1.85,c_9_5_u:1.93,pen_y:3.10,pen_n:1.35,url:"https://www.fonbet.ru/sports/football/"},
-    winline: {yc_3_5_o:1.97,yc_3_5_u:1.82,yc_4_5_o:3.05,yc_4_5_u:1.37,c_9_5_o:1.84,c_9_5_u:1.94,pen_y:3.15,pen_n:1.33,url:"https://www.winline.ru/sports/football/"},
-    betboom: {yc_3_5_o:1.93,yc_3_5_u:1.85,yc_4_5_o:2.98,yc_4_5_u:1.39,c_9_5_o:1.83,c_9_5_u:1.95,pen_y:3.08,pen_n:1.36,url:"https://betboom.ru/sport/Football"},
-  },
-  "Ахмат|Химки": {
-    fonbet:  {yc_3_5_o:1.75,yc_3_5_u:2.05,yc_4_5_o:2.55,yc_4_5_u:1.52,c_8_5_o:1.90,c_8_5_u:1.88,pen_y:3.50,pen_n:1.27,url:"https://www.fonbet.ru/sports/football/"},
-    winline: {yc_3_5_o:1.78,yc_3_5_u:2.02,yc_4_5_o:2.60,yc_4_5_u:1.50,c_8_5_o:1.92,c_8_5_u:1.86,pen_y:3.55,pen_n:1.25,url:"https://www.winline.ru/sports/football/"},
-    betboom: {yc_3_5_o:1.76,yc_3_5_u:2.04,yc_4_5_o:2.58,yc_4_5_u:1.51,c_8_5_o:1.91,c_8_5_u:1.87,pen_y:3.48,pen_n:1.28,url:"https://betboom.ru/sport/Football"},
-  },
-  "Локомотив|Ростов": {
+  "Ростов|Динамо": {
     fonbet:  {yc_3_5_o:1.88,yc_3_5_u:1.90,yc_4_5_o:2.82,yc_4_5_u:1.42,c_9_5_o:1.90,c_9_5_u:1.87,pen_y:3.35,pen_n:1.31,url:"https://www.fonbet.ru/sports/football/"},
     winline: {yc_3_5_o:1.90,yc_3_5_u:1.88,yc_4_5_o:2.85,yc_4_5_u:1.41,c_9_5_o:1.92,c_9_5_u:1.86,pen_y:3.40,pen_n:1.29,url:"https://www.winline.ru/sports/football/"},
     betboom: {yc_3_5_o:1.87,yc_3_5_u:1.91,yc_4_5_o:2.80,yc_4_5_u:1.43,c_9_5_o:1.89,c_9_5_u:1.88,pen_y:3.33,pen_n:1.32,url:"https://betboom.ru/sport/Football"},
   },
-  "Оренбург|Рубин": {
+  "Балтика|ЦСКА": {
+    fonbet:  {yc_3_5_o:1.78,yc_3_5_u:2.00,yc_4_5_o:2.60,yc_4_5_u:1.50,c_8_5_o:1.90,c_8_5_u:1.88,pen_y:3.45,pen_n:1.28,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.80,yc_3_5_u:1.98,yc_4_5_o:2.65,yc_4_5_u:1.48,c_8_5_o:1.92,c_8_5_u:1.86,pen_y:3.50,pen_n:1.27,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.77,yc_3_5_u:2.01,yc_4_5_o:2.58,yc_4_5_u:1.51,c_8_5_o:1.91,c_8_5_u:1.87,pen_y:3.43,pen_n:1.29,url:"https://betboom.ru/sport/Football"},
+  },
+  "Акрон|Ахмат": {
+    fonbet:  {yc_3_5_o:1.82,yc_3_5_u:1.96,yc_4_5_o:2.70,yc_4_5_u:1.47,c_8_5_o:1.92,c_8_5_u:1.86,pen_y:3.55,pen_n:1.26,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.75,yc_4_5_u:1.45,c_8_5_o:1.94,c_8_5_u:1.84,pen_y:3.60,pen_n:1.25,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.81,yc_3_5_u:1.97,yc_4_5_o:2.68,yc_4_5_u:1.48,c_8_5_o:1.91,c_8_5_u:1.87,pen_y:3.53,pen_n:1.27,url:"https://betboom.ru/sport/Football"},
+  },
+  "Пари НН|Крылья Советов": {
+    fonbet:  {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.75,yc_4_5_u:1.45,c_9_5_o:1.87,c_9_5_u:1.91,pen_y:3.30,pen_n:1.31,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.86,yc_3_5_u:1.92,yc_4_5_o:2.78,yc_4_5_u:1.44,c_9_5_o:1.89,c_9_5_u:1.89,pen_y:3.35,pen_n:1.30,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.83,yc_3_5_u:1.95,yc_4_5_o:2.72,yc_4_5_u:1.46,c_9_5_o:1.86,c_9_5_u:1.92,pen_y:3.28,pen_n:1.32,url:"https://betboom.ru/sport/Football"},
+  },
+  "Рубин|Локомотив": {
     fonbet:  {yc_3_5_o:1.72,yc_3_5_u:2.10,yc_4_5_o:2.45,yc_4_5_u:1.57,c_9_5_o:1.93,c_9_5_u:1.85,pen_y:3.60,pen_n:1.25,url:"https://www.fonbet.ru/sports/football/"},
     winline: {yc_3_5_o:1.74,yc_3_5_u:2.07,yc_4_5_o:2.48,yc_4_5_u:1.55,c_9_5_o:1.95,c_9_5_u:1.83,pen_y:3.65,pen_n:1.24,url:"https://www.winline.ru/sports/football/"},
     betboom: {yc_3_5_o:1.71,yc_3_5_u:2.12,yc_4_5_o:2.43,yc_4_5_u:1.58,c_9_5_o:1.92,c_9_5_u:1.86,pen_y:3.58,pen_n:1.26,url:"https://betboom.ru/sport/Football"},
   },
-  "Динамо|Крылья Советов": {
-    fonbet:  {yc_3_5_o:1.82,yc_3_5_u:1.96,yc_4_5_o:2.70,yc_4_5_u:1.47,c_9_5_o:1.87,c_9_5_u:1.91,pen_y:3.30,pen_n:1.31,url:"https://www.fonbet.ru/sports/football/"},
-    winline: {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.75,yc_4_5_u:1.45,c_9_5_o:1.89,c_9_5_u:1.89,pen_y:3.35,pen_n:1.30,url:"https://www.winline.ru/sports/football/"},
-    betboom: {yc_3_5_o:1.81,yc_3_5_u:1.97,yc_4_5_o:2.68,yc_4_5_u:1.48,c_9_5_o:1.86,c_9_5_u:1.92,pen_y:3.28,pen_n:1.32,url:"https://betboom.ru/sport/Football"},
+  "Оренбург|Динамо Махачкала": {
+    fonbet:  {yc_3_5_o:1.76,yc_3_5_u:2.02,yc_4_5_o:2.58,yc_4_5_u:1.51,c_8_5_o:1.90,c_8_5_u:1.88,pen_y:3.65,pen_n:1.24,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.78,yc_3_5_u:2.00,yc_4_5_o:2.62,yc_4_5_u:1.50,c_8_5_o:1.92,c_8_5_u:1.86,pen_y:3.70,pen_n:1.23,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.75,yc_3_5_u:2.03,yc_4_5_o:2.55,yc_4_5_u:1.52,c_8_5_o:1.89,c_8_5_u:1.89,pen_y:3.63,pen_n:1.25,url:"https://betboom.ru/sport/Football"},
   },
 };
 
