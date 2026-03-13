@@ -251,21 +251,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div id="schedule-grid"></div>
     </div>
 
-    <div class="card">
-      <div class="grid-3">
-        <div class="form-group">
-          <label class="form-label">Команда хозяев</label>
-          <select id="homeTeam" onchange="onTeamChange()"></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Команда гостей</label>
-          <select id="awayTeam" onchange="onTeamChange()"></select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Судья (необязательно)</label>
-          <select id="referee"></select>
-        </div>
-      </div>
+    <div style="display:none">
+      <select id="homeTeam" onchange="onTeamChange()"></select>
+      <select id="awayTeam" onchange="onTeamChange()"></select>
+      <select id="referee"></select>
     </div>
 
     <!-- H2H последние встречи -->
