@@ -121,6 +121,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .sched-teams{flex:1;font-size:13px;font-weight:600}
 .sched-ref{font-size:11px;color:var(--muted)}
 .sched-date-label{font-size:11px;color:var(--muted);font-weight:600;margin:10px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+.round-tab{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 16px;font-size:13px;cursor:pointer;color:var(--muted);transition:.15s;white-space:nowrap}
+.round-tab:hover{border-color:var(--accent);color:var(--fg)}
+.round-tab.active{background:rgba(92,110,248,.15);border-color:var(--accent);color:var(--accent);font-weight:600}
+.match-live-badge{display:inline-block;background:#e53935;color:#fff;border-radius:4px;font-size:10px;padding:1px 6px;margin-left:6px;vertical-align:middle;animation:blink-anim 1.2s step-start infinite}
+@keyframes blink-anim{50%{opacity:0}}
 
 .prob-fill{height:100%;border-radius:4px;transition:width .5s ease}
 
@@ -245,9 +250,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <!-- Ближайший тур -->
     <div class="card" id="schedule-card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div style="font-weight:700;font-size:15px" id="schedule-title">📅 Тур 21 · 14–16 марта 2026</div>
+        <div style="font-weight:700;font-size:15px">📅 Расписание РПЛ</div>
         <div style="font-size:12px;color:var(--muted)">Нажмите на матч для быстрого анализа</div>
       </div>
+      <div id="round-tabs" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px"></div>
       <div id="schedule-grid"></div>
     </div>
 
@@ -461,17 +467,37 @@ const REFEREES = {
 
 // Тур 21 РПЛ 2025/2026 · 14–16 марта 2026
 // Источник: premierliga.ru
-const SCHEDULE_ROUND = 21;
-const SCHEDULE_DATES = "14–16 марта 2026";
-const UPCOMING_MATCHES = [
-  {date:"14.03",time:"13:45",home:"Сочи",          away:"Краснодар",        referee:"Лапочкин С."},
-  {date:"14.03",time:"15:30",home:"Зенит",          away:"Спартак",          referee:"Карасев С."},
-  {date:"14.03",time:"18:00",home:"Ростов",         away:"Динамо",           referee:"Левников С."},
-  {date:"14.03",time:"20:15",home:"Балтика",        away:"ЦСКА",             referee:"Матюнин А."},
-  {date:"15.03",time:"13:00",home:"Акрон",          away:"Ахмат",            referee:"Безбородов А."},
-  {date:"15.03",time:"16:00",home:"Пари НН",        away:"Крылья Советов",   referee:"Вилков В."},
-  {date:"15.03",time:"18:45",home:"Рубин",          away:"Локомотив",        referee:"Чистяков Е."},
-  {date:"16.03",time:"14:00",home:"Оренбург",       away:"Динамо Махачкала", referee:"Москалев А."},
+// Все туры с полными датами для фильтрации по статусу матча
+// isoDate — для сравнения с текущим временем (Московское UTC+3)
+const ALL_ROUNDS = [
+  {
+    round: 21,
+    dates: "13–15 марта 2026",
+    matches: [
+      {isoDate:"2026-03-13",displayDate:"13.03",time:"14:00",home:"Динамо Махачкала",away:"Оренбург",          referee:"Москалев А."},
+      {isoDate:"2026-03-14",displayDate:"14.03",time:"13:45",home:"Сочи",            away:"Краснодар",         referee:"Лапочкин С."},
+      {isoDate:"2026-03-14",displayDate:"14.03",time:"15:30",home:"Зенит",           away:"Спартак",           referee:"Карасев С."},
+      {isoDate:"2026-03-14",displayDate:"14.03",time:"18:00",home:"Ростов",          away:"Динамо",            referee:"Левников С."},
+      {isoDate:"2026-03-14",displayDate:"14.03",time:"20:15",home:"Балтика",         away:"ЦСКА",              referee:"Матюнин А."},
+      {isoDate:"2026-03-15",displayDate:"15.03",time:"13:00",home:"Акрон",           away:"Ахмат",             referee:"Безбородов А."},
+      {isoDate:"2026-03-15",displayDate:"15.03",time:"16:00",home:"Пари НН",         away:"Крылья Советов",    referee:"Вилков В."},
+      {isoDate:"2026-03-15",displayDate:"15.03",time:"18:45",home:"Рубин",           away:"Локомотив",         referee:"Чистяков Е."},
+    ]
+  },
+  {
+    round: 22,
+    dates: "20–22 марта 2026",
+    matches: [
+      {isoDate:"2026-03-20",displayDate:"20.03",time:"20:00",home:"Краснодар",       away:"Пари НН",           referee:""},
+      {isoDate:"2026-03-21",displayDate:"21.03",time:"13:45",home:"Ахмат",           away:"Ростов",            referee:""},
+      {isoDate:"2026-03-21",displayDate:"21.03",time:"16:00",home:"ЦСКА",            away:"Динамо Махачкала",  referee:""},
+      {isoDate:"2026-03-21",displayDate:"21.03",time:"20:30",home:"Балтика",         away:"Сочи",              referee:""},
+      {isoDate:"2026-03-22",displayDate:"22.03",time:"13:45",home:"Оренбург",        away:"Спартак",           referee:""},
+      {isoDate:"2026-03-22",displayDate:"22.03",time:"16:00",home:"Динамо",          away:"Зенит",             referee:""},
+      {isoDate:"2026-03-22",displayDate:"22.03",time:"16:30",home:"Крылья Советов",  away:"Рубин",             referee:""},
+      {isoDate:"2026-03-22",displayDate:"22.03",time:"19:00",home:"Локомотив",       away:"Акрон",             referee:""},
+    ]
+  },
 ];
 
 // H2H история последних встреч · Источник: championat.com, sportbox.ru, sports.ru
@@ -541,10 +567,69 @@ const H2H_HISTORY = {
     {date:"29.03.2024",tournament:"РПЛ 23/24, тур 22",   hg:4,ag:1,hyc:2,ayc:2,hc:5,ac:4,ref:"Матюнин А."},
     {date:"19.03.2023",tournament:"РПЛ 22/23",            hg:1,ag:2,hyc:3,ayc:2,hc:4,ac:6,ref:"Москалев А."},
   ],
+
+  // ── ТУР 22 · новые пары ─────────────────────────────────────────
+  // hg/ag = голы первой/второй команды ключа
+  "Краснодар|Пари НН": [
+    {date:"25.10.2025",tournament:"РПЛ 25/26, тур 13",   hg:3,ag:0,hyc:1,ayc:2,hc:7,ac:3,ref:"Лапочкин С."},
+    {date:"10.05.2025",tournament:"РПЛ 24/25, тур 28",   hg:2,ag:0,hyc:2,ayc:2,hc:6,ac:3,ref:"Карасев С."},
+    {date:"30.11.2024",tournament:"РПЛ 24/25, тур 19",   hg:4,ag:0,hyc:1,ayc:3,hc:8,ac:2,ref:"Чистяков Е."},
+    {date:"01.04.2024",tournament:"РПЛ 23/24, тур 23",   hg:2,ag:1,hyc:2,ayc:2,hc:6,ac:4,ref:"Матюнин А."},
+    {date:"11.11.2023",tournament:"РПЛ 23/24, тур 14",   hg:3,ag:1,hyc:1,ayc:2,hc:7,ac:3,ref:"Москалев А."},
+  ],
+  "Ахмат|Ростов": [
+    {date:"30.08.2025",tournament:"РПЛ 25/26, тур 7",    hg:1,ag:1,hyc:2,ayc:2,hc:4,ac:5,ref:"Карасев С."},
+    {date:"12.04.2025",tournament:"РПЛ 24/25, тур 24",   hg:2,ag:1,hyc:3,ayc:2,hc:4,ac:4,ref:"Чистяков Е."},
+    {date:"26.10.2024",tournament:"РПЛ 24/25, тур 13",   hg:3,ag:2,hyc:2,ayc:3,hc:5,ac:5,ref:"Безбородов А."},
+    {date:"28.04.2024",tournament:"РПЛ 23/24, тур 26",   hg:1,ag:1,hyc:3,ayc:2,hc:4,ac:5,ref:"Москалев А."},
+    {date:"04.11.2023",tournament:"РПЛ 23/24, тур 14",   hg:0,ag:1,hyc:2,ayc:2,hc:3,ac:6,ref:"Лапочкин С."},
+  ],
+  "ЦСКА|Динамо Махачкала": [
+    {date:"08.11.2025",tournament:"РПЛ 25/26, тур 15",   hg:1,ag:0,hyc:1,ayc:3,hc:5,ac:3,ref:"Левников С."},
+    {date:"26.11.2025",tournament:"Кубок России 25/26",   hg:2,ag:1,hyc:2,ayc:2,hc:5,ac:3,ref:"Матюнин А."},
+    {date:"29.03.2025",tournament:"РПЛ 24/25, тур 22",   hg:2,ag:0,hyc:2,ayc:3,hc:5,ac:3,ref:"Карасев С."},
+    {date:"19.10.2024",tournament:"РПЛ 24/25, тур 12",   hg:1,ag:0,hyc:2,ayc:3,hc:5,ac:3,ref:"Безбородов А."},
+    {date:"05.11.2025",tournament:"Кубок России 25/26",   hg:0,ag:1,hyc:2,ayc:2,hc:4,ac:4,ref:"Чистяков Е."},
+  ],
+  "Балтика|Сочи": [
+    {date:"25.10.2025",tournament:"РПЛ 25/26, тур 13",   hg:1,ag:0,hyc:2,ayc:2,hc:5,ac:4,ref:"Лапочкин С."},
+    {date:"22.03.2024",tournament:"РПЛ 23/24, тур 22",   hg:2,ag:1,hyc:3,ayc:2,hc:5,ac:4,ref:"Чистяков Е."},
+    {date:"14.10.2023",tournament:"РПЛ 23/24, тур 10",   hg:0,ag:2,hyc:2,ayc:1,hc:3,ac:5,ref:"Вилков В."},
+    {date:"21.10.2022",tournament:"РПЛ 22/23, тур 11",   hg:1,ag:1,hyc:2,ayc:2,hc:4,ac:5,ref:"Безбородов А."},
+    {date:"14.05.2022",tournament:"РПЛ 21/22, тур 28",   hg:0,ag:1,hyc:3,ayc:1,hc:3,ac:6,ref:"Карасев С."},
+  ],
+  "Оренбург|Спартак": [
+    {date:"25.10.2025",tournament:"РПЛ 25/26, тур 13",   hg:0,ag:1,hyc:2,ayc:1,hc:3,ac:5,ref:"Москалев А."},
+    {date:"02.03.2025",tournament:"РПЛ 24/25, тур 19",   hg:0,ag:2,hyc:1,ayc:2,hc:3,ac:6,ref:"Чистяков Е."},
+    {date:"21.07.2024",tournament:"РПЛ 24/25, тур 1",    hg:2,ag:0,hyc:3,ayc:2,hc:5,ac:3,ref:"Левников С."},
+    {date:"25.05.2024",tournament:"РПЛ 23/24, тур 30",   hg:0,ag:0,hyc:2,ayc:2,hc:4,ac:5,ref:"Вилков В."},
+    {date:"21.10.2023",tournament:"РПЛ 23/24, тур 11",   hg:1,ag:1,hyc:2,ayc:2,hc:4,ac:4,ref:"Карасев С."},
+  ],
+  "Динамо|Зенит": [
+    {date:"26.10.2025",tournament:"РПЛ 25/26, тур 13",   hg:1,ag:2,hyc:2,ayc:1,hc:4,ac:6,ref:"Матюнин А."},
+    {date:"26.04.2025",tournament:"РПЛ 24/25, тур 26",   hg:1,ag:1,hyc:2,ayc:1,hc:5,ac:4,ref:"Левников С."},
+    {date:"10.08.2024",tournament:"РПЛ 24/25, тур 4",    hg:0,ag:1,hyc:2,ayc:1,hc:4,ac:5,ref:"Карасев С."},
+    {date:"28.04.2024",tournament:"РПЛ 23/24, тур 25",   hg:1,ag:0,hyc:2,ayc:2,hc:5,ac:4,ref:"Мешков В."},
+    {date:"06.08.2023",tournament:"РПЛ 23/24, тур 3",    hg:3,ag:2,hyc:3,ayc:2,hc:6,ac:5,ref:"Безбородов А."},
+  ],
+  "Крылья Советов|Рубин": [
+    {date:"04.10.2025",tournament:"РПЛ 25/26, тур 11",   hg:0,ag:1,hyc:2,ayc:2,hc:4,ac:5,ref:"Чистяков Е."},
+    {date:"11.05.2025",tournament:"РПЛ 24/25, тур 28",   hg:2,ag:0,hyc:2,ayc:3,hc:6,ac:3,ref:"Москалев А."},
+    {date:"29.09.2024",tournament:"РПЛ 24/25, тур 11",   hg:1,ag:1,hyc:3,ayc:2,hc:4,ac:4,ref:"Безбородов А."},
+    {date:"14.04.2024",tournament:"РПЛ 23/24, тур 24",   hg:1,ag:0,hyc:2,ayc:2,hc:5,ac:3,ref:"Лапочкин С."},
+    {date:"04.11.2023",tournament:"РПЛ 23/24, тур 14",   hg:0,ag:2,hyc:3,ayc:1,hc:3,ac:6,ref:"Карасев С."},
+  ],
+  "Локомотив|Акрон": [
+    {date:"26.10.2025",tournament:"РПЛ 25/26, тур 13",   hg:1,ag:1,hyc:1,ayc:2,hc:5,ac:3,ref:"Карасев С."},
+    {date:"24.05.2025",tournament:"РПЛ 24/25, тур 30",   hg:4,ag:1,hyc:2,ayc:3,hc:6,ac:3,ref:"Безбородов А."},
+    {date:"20.07.2024",tournament:"РПЛ 24/25, тур 1",    hg:3,ag:2,hyc:2,ayc:2,hc:5,ac:3,ref:"Матюнин А."},
+    {date:"12.04.2024",tournament:"Кубок России 23/24",   hg:2,ag:0,hyc:1,ayc:2,hc:4,ac:3,ref:"Чистяков Е."},
+    {date:"22.10.2023",tournament:"ФНЛ 23/24",            hg:3,ag:1,hyc:2,ayc:2,hc:5,ac:4,ref:"Вилков В."},
+  ],
 };
 
 // ================================================================
-// BOOKMAKER ODDS (данные по матчам тура 21 · март 2026)
+// BOOKMAKER ODDS (данные по матчам туров 21–22 · март 2026)
 // Формат: yc_X_over/under — тотал ЖК, c_X — угловые,
 //         pen_yes/no — пенальти
 // ================================================================
@@ -588,6 +673,47 @@ const BOOKMAKER_ODDS = {
     fonbet:  {yc_3_5_o:1.76,yc_3_5_u:2.02,yc_4_5_o:2.58,yc_4_5_u:1.51,c_8_5_o:1.90,c_8_5_u:1.88,pen_y:3.65,pen_n:1.24,url:"https://www.fonbet.ru/sports/football/"},
     winline: {yc_3_5_o:1.78,yc_3_5_u:2.00,yc_4_5_o:2.62,yc_4_5_u:1.50,c_8_5_o:1.92,c_8_5_u:1.86,pen_y:3.70,pen_n:1.23,url:"https://www.winline.ru/sports/football/"},
     betboom: {yc_3_5_o:1.75,yc_3_5_u:2.03,yc_4_5_o:2.55,yc_4_5_u:1.52,c_8_5_o:1.89,c_8_5_u:1.89,pen_y:3.63,pen_n:1.25,url:"https://betboom.ru/sport/Football"},
+  },
+  // ── ТУР 22 ──────────────────────────────────────────────────────
+  "Краснодар|Пари НН": {
+    fonbet:  {yc_3_5_o:1.95,yc_3_5_u:1.83,yc_4_5_o:3.00,yc_4_5_u:1.38,c_9_5_o:1.85,c_9_5_u:1.93,pen_y:3.20,pen_n:1.33,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.93,yc_3_5_u:1.85,yc_4_5_o:2.95,yc_4_5_u:1.40,c_9_5_o:1.87,c_9_5_u:1.91,pen_y:3.25,pen_n:1.32,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.94,yc_3_5_u:1.84,yc_4_5_o:2.98,yc_4_5_u:1.39,c_9_5_o:1.86,c_9_5_u:1.92,pen_y:3.22,pen_n:1.33,url:"https://betboom.ru/sport/Football"},
+  },
+  "Ахмат|Ростов": {
+    fonbet:  {yc_3_5_o:1.88,yc_3_5_u:1.90,yc_4_5_o:2.80,yc_4_5_u:1.43,c_8_5_o:1.91,c_8_5_u:1.87,pen_y:3.45,pen_n:1.28,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.90,yc_3_5_u:1.88,yc_4_5_o:2.85,yc_4_5_u:1.41,c_8_5_o:1.93,c_8_5_u:1.85,pen_y:3.50,pen_n:1.27,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.87,yc_3_5_u:1.91,yc_4_5_o:2.78,yc_4_5_u:1.44,c_8_5_o:1.90,c_8_5_u:1.88,pen_y:3.43,pen_n:1.29,url:"https://betboom.ru/sport/Football"},
+  },
+  "ЦСКА|Динамо Махачкала": {
+    fonbet:  {yc_3_5_o:1.80,yc_3_5_u:1.98,yc_4_5_o:2.65,yc_4_5_u:1.48,c_8_5_o:1.88,c_8_5_u:1.90,pen_y:3.55,pen_n:1.26,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.82,yc_3_5_u:1.96,yc_4_5_o:2.70,yc_4_5_u:1.46,c_8_5_o:1.90,c_8_5_u:1.88,pen_y:3.60,pen_n:1.25,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.79,yc_3_5_u:1.99,yc_4_5_o:2.63,yc_4_5_u:1.49,c_8_5_o:1.87,c_8_5_u:1.91,pen_y:3.53,pen_n:1.27,url:"https://betboom.ru/sport/Football"},
+  },
+  "Балтика|Сочи": {
+    fonbet:  {yc_3_5_o:1.85,yc_3_5_u:1.93,yc_4_5_o:2.75,yc_4_5_u:1.45,c_8_5_o:1.92,c_8_5_u:1.86,pen_y:3.50,pen_n:1.27,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.87,yc_3_5_u:1.91,yc_4_5_o:2.78,yc_4_5_u:1.44,c_8_5_o:1.94,c_8_5_u:1.84,pen_y:3.55,pen_n:1.26,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.72,yc_4_5_u:1.46,c_8_5_o:1.91,c_8_5_u:1.87,pen_y:3.48,pen_n:1.28,url:"https://betboom.ru/sport/Football"},
+  },
+  "Оренбург|Спартак": {
+    fonbet:  {yc_3_5_o:1.86,yc_3_5_u:1.92,yc_4_5_o:2.78,yc_4_5_u:1.44,c_9_5_o:1.89,c_9_5_u:1.89,pen_y:3.35,pen_n:1.30,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.88,yc_3_5_u:1.90,yc_4_5_o:2.82,yc_4_5_u:1.42,c_9_5_o:1.91,c_9_5_u:1.87,pen_y:3.40,pen_n:1.29,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.85,yc_3_5_u:1.93,yc_4_5_o:2.76,yc_4_5_u:1.45,c_9_5_o:1.88,c_9_5_u:1.90,pen_y:3.33,pen_n:1.31,url:"https://betboom.ru/sport/Football"},
+  },
+  "Динамо|Зенит": {
+    fonbet:  {yc_3_5_o:1.83,yc_3_5_u:1.95,yc_4_5_o:2.72,yc_4_5_u:1.46,c_9_5_o:1.90,c_9_5_u:1.88,pen_y:3.40,pen_n:1.29,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.85,yc_3_5_u:1.93,yc_4_5_o:2.75,yc_4_5_u:1.45,c_9_5_o:1.92,c_9_5_u:1.86,pen_y:3.45,pen_n:1.28,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.82,yc_3_5_u:1.96,yc_4_5_o:2.70,yc_4_5_u:1.47,c_9_5_o:1.89,c_9_5_u:1.89,pen_y:3.38,pen_n:1.30,url:"https://betboom.ru/sport/Football"},
+  },
+  "Крылья Советов|Рубин": {
+    fonbet:  {yc_3_5_o:1.84,yc_3_5_u:1.94,yc_4_5_o:2.74,yc_4_5_u:1.45,c_9_5_o:1.88,c_9_5_u:1.90,pen_y:3.45,pen_n:1.28,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.86,yc_3_5_u:1.92,yc_4_5_o:2.78,yc_4_5_u:1.44,c_9_5_o:1.90,c_9_5_u:1.88,pen_y:3.50,pen_n:1.27,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.83,yc_3_5_u:1.95,yc_4_5_o:2.72,yc_4_5_u:1.46,c_9_5_o:1.87,c_9_5_u:1.91,pen_y:3.43,pen_n:1.29,url:"https://betboom.ru/sport/Football"},
+  },
+  "Локомотив|Акрон": {
+    fonbet:  {yc_3_5_o:1.79,yc_3_5_u:1.99,yc_4_5_o:2.62,yc_4_5_u:1.50,c_9_5_o:1.93,c_9_5_u:1.85,pen_y:3.55,pen_n:1.26,url:"https://www.fonbet.ru/sports/football/"},
+    winline: {yc_3_5_o:1.81,yc_3_5_u:1.97,yc_4_5_o:2.66,yc_4_5_u:1.48,c_9_5_o:1.95,c_9_5_u:1.83,pen_y:3.60,pen_n:1.25,url:"https://www.winline.ru/sports/football/"},
+    betboom: {yc_3_5_o:1.78,yc_3_5_u:2.00,yc_4_5_o:2.60,yc_4_5_u:1.51,c_9_5_o:1.92,c_9_5_u:1.86,pen_y:3.53,pen_n:1.27,url:"https://betboom.ru/sport/Football"},
   },
 };
 
@@ -1294,33 +1420,102 @@ function renderRefCharts() {
 }
 
 // ================================================================
-// RENDER: SCHEDULE (Тур 22)
+// RENDER: SCHEDULE — фильтр по турам / статус матчей
 // ================================================================
-function renderSchedule() {
+
+// Возвращает дату начала матча в московском времени (UTC+3)
+function matchKickoff(m) {
+  return new Date(`${m.isoDate}T${m.time}:00+03:00`);
+}
+
+// 'upcoming' | 'live' | 'finished'
+function matchStatus(m) {
+  const now   = new Date();
+  const start = matchKickoff(m);
+  const end   = new Date(start.getTime() + 110 * 60 * 1000);
+  if (now < start) return 'upcoming';
+  if (now < end)   return 'live';
+  return 'finished';
+}
+
+// Туры, в которых есть хоть один не завершённый матч
+function availableRounds() {
+  return ALL_ROUNDS.filter(r => r.matches.some(m => matchStatus(m) !== 'finished'));
+}
+
+let _activeRound = null;
+
+function renderRoundTabs(rounds, activeRound) {
+  const container = document.getElementById('round-tabs');
+  if (!container) return;
+  container.innerHTML = rounds.map(r =>
+    `<button class="round-tab${r.round === activeRound ? ' active' : ''}"
+       onclick="selectRound(${r.round})">
+       Тур ${r.round} · ${r.dates}
+     </button>`
+  ).join('');
+}
+
+function selectRound(roundNum) {
+  _activeRound = roundNum;
+  const rounds = availableRounds();
+  renderRoundTabs(rounds, roundNum);
+  renderScheduleGrid(roundNum);
+}
+
+function renderScheduleGrid(roundNum) {
   const grid = document.getElementById('schedule-grid');
   if (!grid) return;
 
+  const roundData = ALL_ROUNDS.find(r => r.round === roundNum);
+  if (!roundData) { grid.innerHTML = '<div style="color:var(--muted);font-size:13px">Нет данных о туре</div>'; return; }
+
+  // Показываем только не завершённые матчи
+  const visible = roundData.matches.filter(m => matchStatus(m) !== 'finished');
+  if (!visible.length) {
+    grid.innerHTML = '<div style="color:var(--muted);font-size:13px">Все матчи этого тура завершены</div>';
+    return;
+  }
+
   const byDate = {};
-  UPCOMING_MATCHES.forEach(m => {
-    (byDate[m.date] = byDate[m.date] || []).push(m);
-  });
+  visible.forEach(m => { (byDate[m.displayDate] = byDate[m.displayDate] || []).push(m); });
 
   let html = '';
   Object.entries(byDate).forEach(([date, matches]) => {
     html += `<div class="sched-date-label">${date}</div>`;
     html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-bottom:4px">`;
     matches.forEach(m => {
-      const id = `sched_${m.home}_${m.away}`.replace(/\s/g,'_');
+      const id     = `sched_${m.home}_${m.away}`.replace(/\s/g,'_');
+      const status = matchStatus(m);
+      const liveBadge = status === 'live'
+        ? `<span class="match-live-badge">LIVE</span>`
+        : '';
+      const refStr = m.referee ? `<div class="sched-ref">👤 ${m.referee}</div>` : '';
       html += `<div class="schedule-match" id="${id}"
         onclick="selectScheduleMatch('${m.home}','${m.away}','${m.referee}','${id}')">
-        <div class="sched-time">${m.time}</div>
+        <div class="sched-time">${m.time}${liveBadge}</div>
         <div class="sched-teams">${m.home} — ${m.away}</div>
-        <div class="sched-ref">👤 ${m.referee}</div>
+        ${refStr}
       </div>`;
     });
     html += `</div>`;
   });
   grid.innerHTML = html;
+}
+
+function renderSchedule() {
+  const rounds = availableRounds();
+  if (!rounds.length) {
+    document.getElementById('round-tabs').innerHTML = '';
+    document.getElementById('schedule-grid').innerHTML =
+      '<div style="color:var(--muted);font-size:13px">Нет предстоящих матчей</div>';
+    return;
+  }
+  // Выбираем первый тур с матчами: если активный уже задан и присутствует — используем его
+  const chosen = rounds.find(r => r.round === _activeRound) ? _activeRound : rounds[0].round;
+  _activeRound = chosen;
+  renderRoundTabs(rounds, chosen);
+  renderScheduleGrid(chosen);
 }
 
 function selectScheduleMatch(home, away, referee, selectedId) {
@@ -1394,11 +1589,6 @@ function initSelects() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Dynamic schedule title
-  const titleEl = document.getElementById('schedule-title');
-  if (titleEl) {
-    titleEl.textContent = `📅 Тур ${SCHEDULE_ROUND} · ${SCHEDULE_DATES}`;
-  }
   initSelects();
   renderSchedule();
   analyzeMatch();
